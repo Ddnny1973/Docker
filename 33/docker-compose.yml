@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  wetty:
+    image: wettyoss/wetty:latest
+    container_name: wetty
+    restart: always
+    ports:
+      - "8033:3000"
+    environment:
+      - SSHHOST=172.17.0.1
+      - SSHPORT=22
+      - SSHUSER=root
+      - TITLE=Wetty Host Local
+      - BASE=/

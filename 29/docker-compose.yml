@@ -1,0 +1,37 @@
+version: '3.1'
+services:
+  web:
+    #image: odoo-aserprem:16
+    image: odoo:16
+    user: root
+    restart: "always"
+    depends_on:
+     - db-29
+    ports:
+     - "8029:8069"
+    environment:
+     - HOST=db-29
+     - USER=odoo
+     - PASSWORD=odoo
+    volumes:
+     - ./config:/etc/odoo
+     - ./filestore:/var/lib/odoo/filestore
+     - ./extra-addons:/mnt/extra-addons
+     - ./postgresql/data/compartida:/mnt/compartida
+     - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+     test: curl --fail http://localhost || exit 1
+     interval: 5m00s
+     timeout: 20s
+     retries: 3
+  db-29:
+    image: postgres:12
+    restart: "always"
+    ports:
+     - "9029:5432"
+    volumes:
+     - ./postgresql/data:/var/lib/postgresql/data
+    environment:
+     - POSTGRES_DB=postgres
+     - POSTGRES_PASSWORD=odoo
+     - POSTGRES_USER=odoo

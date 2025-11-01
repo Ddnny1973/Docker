@@ -1,0 +1,35 @@
+version: '3.1'
+services:
+  web:
+    image: odoo:16
+    #image: odoo-aimindnovation:16
+    restart: "always"
+    depends_on:
+     - db-30
+    ports:
+     - "8030:8069"
+    environment:
+     - HOST=db-30
+     - USER=odoo
+     - PASSWORD=odoo
+    volumes:
+     - ./config:/etc/odoo
+     - ./filestore:/var/lib/odoo/filestore
+     - ./extra-addons:/mnt/extra-addons
+     - ./postgresql/data/compartida:/mnt/compartida
+    healthcheck:
+     test: curl --fail http://localhost || exit 1
+     interval: 5m00s
+     timeout: 20s
+     retries: 3
+  db-30:
+    image: postgres:12
+    restart: "always"
+    ports:
+     - "9030:5432"
+    volumes:
+     - ./postgresql/data:/var/lib/postgresql/data
+    environment:
+     - POSTGRES_DB=postgres
+     - POSTGRES_PASSWORD=odoo
+     - POSTGRES_USER=odoo

@@ -3,7 +3,7 @@
 # Uso: ./backup_todos.sh
 
 # Lista de carpetas de contenedores a respaldar (modifica según tus necesidades)
-CONTAINERS=(29 33 34)
+CONTAINERS=(16 29 30 32 33 34)
 
 
 

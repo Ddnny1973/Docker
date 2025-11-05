@@ -16,6 +16,7 @@ services:
      - ./filestore:/var/lib/odoo/filestore
      - ./extra-addons:/mnt/extra-addons
      - ./postgresql/data/compartida:/mnt/compartida
+    command: ["odoo", "--config=/etc/odoo/odoo.conf"]
     healthcheck:
      test: curl --fail http://localhost || exit 1
      interval: 5m00s

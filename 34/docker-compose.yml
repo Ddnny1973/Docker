@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  vscode-web:
+    build: .
+    container_name: vscode-server
+    ports:
+      - "8034:8034"
+    volumes:
+      - vscode-data:/home/coder
+      - ./projects:/home/coder/project
+    environment:
+      - PASSWORD=${VSCODE_PASSWORD:-changeme123}
+    restart: unless-stopped
+    networks:
+      - vscode-net
+
+networks:
+  vscode-net:
+    driver: bridge
+
+volumes:
+  vscode-data:

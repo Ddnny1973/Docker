@@ -17,9 +17,6 @@ RUN useradd -m -s /bin/bash coder && echo "coder ALL=(ALL) NOPASSWD:ALL" >> /etc
 USER coder
 WORKDIR /home/coder/project
 
-# Asegurar permisos correctos
-RUN mkdir -p /home/coder/.vscode && chown -R coder:coder /home/coder
-
 # Puerto web
 EXPOSE 8034
 

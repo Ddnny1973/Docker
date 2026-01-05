@@ -1,0 +1,44 @@
+services:
+  web:
+    image: odoo:18
+    user: root
+    restart: "always"
+    depends_on:
+      db-35:
+        condition: service_healthy
+    ports:
+     - "8035:8069"
+    environment:
+     - HOST=db-35
+     - PORT=5432
+     - USER=odoo
+     - PASSWORD=odoo
+     - POSTGRES_DB=odoo
+    volumes:
+     - ./config:/etc/odoo
+     - ./filestore:/var/lib/odoo/filestore
+     - ./extra-addons:/mnt/extra-addons
+     - ./postgresql/data/compartida:/mnt/compartida
+     - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+     test: curl --fail http://localhost:8069 || exit 1
+     interval: 30s
+     timeout: 10s
+     retries: 5
+    
+  db-35:
+    image: postgres:16
+    restart: "always"
+    ports:
+     - "9035:5432"
+    volumes:
+     - ./postgresql/data:/var/lib/postgresql/data
+    environment:
+     - POSTGRES_DB=odoo
+     - POSTGRES_PASSWORD=odoo
+     - POSTGRES_USER=odoo
+    healthcheck:
+     test: ["CMD-SHELL", "pg_isready -U odoo"]
+     interval: 10s
+     timeout: 5s
+     retries: 5

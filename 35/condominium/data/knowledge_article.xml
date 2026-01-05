@@ -1,0 +1,148 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<odoo>
+    <template id="welcome_article_body">
+        <h1 data-oe-version="1.0">Property Owner Association</h1>
+        <p>Welcome to your Odoo Property Owner Association package! This guide will help you manage the condominiums efficiently, from setting up to general meetings.</p>
+        <div data-embedded="tableOfContent"></div>
+        <h1>Business Flows</h1>
+        <h2>Easily convert the condominiums 🖋️</h2>
+        <p>
+            As soon as a condominium reaches out to you to get a quote, quickly send them an overview of your services and fees by creating
+            <font class="text-o-color-1" style="font-weight: bolder;">Quotations</font> in the Sales application where you can directly use the "Kick-Off Quote" quotation template. This will automatically fill the quote by adding the kick-off fees
+            and also the price of all the extra services such as the recurring contribution, the hourly rate, etc. Don't forget to attach the terms &amp; conditions as well. Of course, the price of each service and the content of the
+            <font class="text-o-color-1" style="font-weight: bolder;">Quotation Templates</font> can be adapted accordingly.
+        </p>
+        <p><a href="https://www.odoo.com/documentation/latest/applications/sales/sales.html" class="btn btn-outline-primary btn-sm">🎓 Sales</a></p>
+        <p><a href="https://www.odoo.com/documentation/latest/applications/sales/sales/send_quotations/quote_template.html" class="btn btn-outline-primary btn-sm">🎓 Quotation Template</a><br /></p>
+        <h2>Never forget a task 📑</h2>
+        <p>
+            Once the quotation is confirmed, it automatically creates <font class="text-o-color-1" style="font-weight: bolder;">Projects</font> including several tasks to properly start the collaboration. This is based on the
+            <font class="text-o-color-1" style="font-weight: bolder;">Kick-Off Template</font> Template project:
+        </p>
+        <ul>
+            <li>Contracts establishment<br /></li>
+            <li>Condominium creation in Odoo (see <em>Quickly Set Up a Condominium 🚀 </em>section)</li>
+            <li>Properties creation in Odoo (see <em>Know the stakeholders 🔎</em> section)</li>
+            <li>Accounting opening/handover<br /></li>
+            <li>Audit</li>
+            <li>Meters reading</li>
+            <li>Act analysis</li>
+            <li>Insurances analysis</li>
+            <li>Kick-off meeting</li>
+            <li>Call for working and reserve funds</li>
+            <li>...</li>
+        </ul>
+        <p>Again, feel free to edit and/or create new tasks to never forget a step during the kick-off process.</p>
+        <h2 class="null">Quickly set up a condominium 🚀</h2>
+        <p>Once the quotation is confirmed, the condominium should be created in Odoo. Basically, a<strong> </strong>condominium is like a company that is funded by the owners and that has to pay for operating costs.</p>
+        <p>
+            From the Settings, create a new company in <font class="text-o-color-1" style="font-weight: bolder;">Companies</font>. Once done, it will appear on the top right of all screens with the aim to quickly switch between your company and the
+            different condominiums.
+        </p>
+        <p style="margin-bottom: 0px;">
+            Once done, it is time to create the composition of the condominium by selecting the right one on the top right of the screen. Then, open the <strong><font class="text-o-color-1">Condominium</font></strong> app where you can:
+        </p>
+        <ul>
+            <li>See the information of the condominium and fill the vendors to build an address book.</li>
+            <li>Create the buildings that compounds the condominium.</li>
+            <li>Create the properties that compounds the buildings: apartment, studio, flat, penthouse, garage, etc.</li>
+        </ul>
+        <p>
+            Each property is characterized by:
+        </p>
+        <ul>
+            <li>A name to identify the property, for example the post box or the identification code.</li>
+            <li>The building to which the property belongs.</li>
+            <li>The type to easily classify it.</li>
+            <li>The owner of the property.</li>
+            <li>The tenant if relevant.</li>
+            <li>Some tags to add extra visual information.</li>
+            <li>The parent property, for example to indicate that a garage is linked with an apartment.</li>
+            <li>The floor.</li>
+            <li>
+                The area.
+            </li>
+        </ul>
+        <p>Finally, you can also define the distribution keys per property. The goal is to assign a ratio for each property that will be used for splitting the fees per owner and for distributing the costs.</p>
+        <div class="o_editor_banner user-select-none o_not_editable lh-1 d-flex align-items-center alert alert-info pb-0 pt-3">
+            <i class="o_editor_banner_icon mb-3 fst-normal">💡</i>
+            <div class="w-100 px-3">
+                <p>If there is no distribution keys set, the area will be used as default key.</p>
+            </div>
+        </div>
+        <p><a href="https://www.odoo.com/documentation/latest/applications/general/users/companies.html" class="btn btn-outline-primary btn-sm">🎓 Companies</a></p>
+        <h2>Fairly split the costs ⚖️</h2>
+        <p>Each owner has to pay recurring fees:</p>
+        <ul>
+            <li>The working fund that is used to pay the common charges such as monthly expenses (water, electricity, gas, etc.), insurances, maintenance, repairs, cleaning of common areas, etc.</li>
+            <li>The reserve fund that is a savings account used in case of exceptional expenses such as a severe repair, an investment in equipment, etc.</li>
+            <li>The services provided by the condominium management company.</li>
+        </ul>
+        <p>On the one hand, the funds requests are sent by the condominium to the owners. On the other hand, the service fees can be invoiced by "My Condominium Management" to the owners. Here are the steps to follow:</p>
+        <ol>
+            <li>Select the right company from which the fees will be invoiced (see <em>Quickly set up a condominium 🚀</em> section to see how to switch the company).</li>
+            <li>In the Sales application, create a quotation and set the condominium as customer.</li>
+            <li>Set the right distribution key.</li>
+            <li>In case of recurring fees:</li>
+            <li class="oe-nested">
+                <ol>
+                    <li>Define a recurring plan, monthly or yearly.</li>
+                    <li>Set the recurring plan start date.</li>
+                    <li>Make sure that the products added are recurring.</li>
+                </ol>
+            </li>
+            <li>Add the corresponding product(s): "Working Fund", "Reserve Fund", "Service Fees", etc.</li>
+            <li>Set the right (recurring) price.</li>
+            <li>Click on "Split per Property" button: this will cancel the current quotation and will create as many quotations as there are properties in the condominium for which the costs are shared.</li>
+            <li>Click on the "Sales Orders" buttons to access all the generated quotations.</li>
+            <li>Check if everything is correct. If yes, select all the quotations and, under the "Actions" button, click on "Confirm".</li>
+            <li>In case of recurring fees, the invoices will be automatically generated by Odoo at the right date. If not, you can manually post them in mass. Then just send them using your preferred way!</li>
+        </ol>
+        <p>
+            For example, to collect the cotisations, the selected company must be the condominium and the customer must be the condominium too. If you want to invoice your services, the selected company must be yours and the customer must be the
+            condominium to be invoiced.
+        </p>
+        <p><a href="https://www.odoo.com/documentation/latest/applications/sales/subscriptions.html" class="btn btn-outline-primary btn-sm">🎓 Subscription</a><br /></p>
+        <h2>Book the right numbers 🧮</h2>
+        <p>A condominium works like a company. It gets revenues from the owners. These are collected in two bank accounts that can be directly integrated with the bank:</p>
+        <ul>
+            <li>Working Fund: to collect all the money that will be used to pay the recurring fees.</li>
+            <li>Reserve Fund: to collect all the money that will be used in case of exceptional expense.</li>
+        </ul>
+        <p>
+            These will be used to pay the <strong><font class="text-o-color-1">Vendor Bills</font></strong> that can be uploaded and automatically filled thanks to <a href="https://www.odoo.com/app/invoice-automation">Artificial Intelligence</a>.
+            As soon as a bill is booked, you can use the button "Distribute Cost" to automatically reflect the cost per property according to the distribution key.
+        </p>
+        <p>By the end of the period, easily generate the legal reporting such as Balance Sheet and Profit &amp; Loss for each condominium.</p>
+        <p><a href="https://www.odoo.com/documentation/latest/applications/finance/accounting.html" class="btn btn-outline-primary btn-sm">🎓 Accounting</a><br /></p>
+        <h2 class="null">Schedule the meetings 📅</h2>
+        <p>
+            Every year, a general meeting is scheduled to talk about the financial statements, to take important decisions and so on. This event can easily be scheduled in the Calendar app by creating
+            <font class="text-o-color-1" style="font-weight: bolder;">Meetings</font>. To invite all the owners of a condominium, use the "Search More" on "Attendees" and type the name of the condominium in... "Condominiums".
+        </p>
+        <h2>Efficiently count the votes 🙋‍♂️</h2>
+        <p>
+            During the general meetings, counting the votes depending on the ownership percentage could be painful. From the properties screen, select all the properties of the corresponding condominium and insert them in a spreadsheet by using the
+            said feature under the Actions menu.
+        </p>
+        <p><a href="https://www.odoo.com/documentation/latest/applications/finance/spreadsheet.html" class="btn btn-outline-primary btn-sm">🎓 Spreadsheet</a></p>
+        <h2>Provide the best customer service 🆘</h2>
+        <p>
+            In their day to day, the owners and the tenants can face some issues. In order to collect and centralize them, use the <strong><font class="text-o-color-1">Helpdesk</font></strong> application. Thereby, each member can send an email
+            that will be caught in the right helpdesk team. This eases the follow-up and the invoicing in case the time spent is not covered by the service fees.
+        </p>
+        <p><a class="btn btn-outline-primary btn-sm" href="https://www.odoo.com/documentation/latest/applications/services/helpdesk/overview/getting_started.html">🎓 Helpdesk</a></p>
+    </template>    
+
+    <record id="welcome_article" model="knowledge.article">
+        <field name="name">Property Owner Association</field>
+        <field name="sequence">16</field>
+        <field name="is_locked" eval="True"/>
+        <field name="is_article_visible_by_everyone" eval="True"/>
+        <field name="cover_image_position">26.8</field>
+        <field name="cover_image_id" ref="knowledge_cover_11"/>
+        <field name="icon">🏢</field>
+        <field name="internal_permission">write</field>
+        <field name="body"><![CDATA[]]></field>
+    </record>
+</odoo>

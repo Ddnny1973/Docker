@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   n8n:
     image: n8nio/n8n
@@ -112,6 +110,22 @@ services:
       - ./ocr-service:/app
     restart: unless-stopped
 
+  # 🆕 Servicio de transcripción de audio con Whisper
+  transcription:
+    build:
+      context: ./transcription-service
+    container_name: transcription
+    ports:
+      - "5003:5000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      # Montar directorios de media para acceso directo a los archivos de audio
+      - ./wppapi-media:/app/wppapi-media:ro
+      - ./wppapi-ai-media:/app/wppapi-ai-media:ro
+      - ./wppapi-ai-2-media:/app/wppapi-ai-2-media:ro
+    restart: unless-stopped
+
 
   pdf2img:
     build:
@@ -132,7 +146,7 @@ services:
       - SAVE_MEDIA=true
       - MEDIA_PATH=/app/media
     volumes:
-      - wppapi_data:/app/.wwebjs_auth
+      - ./wppapi_data:/app/.wwebjs_auth
       - ./wppapi-media:/app/media
     expose:
       - "3000"
@@ -145,7 +159,8 @@ services:
     environment:
       - WPP_SESSION_ID=mb-asesores
     volumes:
-      - wppapi_mb_data:/app/.wwebjs_auth
+      - ./wppapi_mb_data:/app/.wwebjs_auth
+      - ./wppapi-mb-media:/app/media
     expose:
       - "3000"
 
@@ -161,7 +176,7 @@ services:
       - SAVE_MEDIA=true
       - MEDIA_PATH=/app/media
     volumes:
-      - wppapi_ai_data:/app/.wwebjs_auth
+      - ./wppapi_ai_data:/app/.wwebjs_auth
       - ./wppapi-ai-media:/app/media
     expose:
       - "3000"

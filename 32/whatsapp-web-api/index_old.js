@@ -56,8 +56,7 @@ const saveMediaFile = async (media, messageId, type, contactName) => {
             file_name: fileName,
             file_size: buffer.length,
             mime_type: media.mimetype,
-            relative_path: path.join(dateFolder, type, fileName), // para BD
-            base64_data: media.data // Incluir base64 para transcripción
+            relative_path: path.join(dateFolder, type, fileName) // para BD
         };
     } catch (error) {
         console.error(`❌ Error guardando media:`, error);
@@ -120,11 +119,11 @@ const startClient = () => {
         if (ENABLE_RECEIVE_MESSAGES) {
             console.log(`📨 Recepción de mensajes ACTIVADA para sesión: ${SESSION_ID}`);
             client.on('message_create', async (msg) => {
-                console.log(`🔔 Evento 'message_create' disparado - isStatus: ${msg.isStatus}, fromMe: ${msg.fromMe}, type: ${msg.type}`);
+                console.log(`🔔 Evento 'message_create' disparado - isStatus: ${msg.isStatus}, fromMe: ${msg.fromMe}`);
                 try {
                     // Ignorar solo mensajes de estados (stories)
                     if (msg.isStatus) {
-                        console.log(`⭐️ Mensaje ignorado: es un estado/story`);
+                        console.log(`⏭️  Mensaje ignorado: es un estado/story`);
                         return;
                     }
 
@@ -134,12 +133,9 @@ const startClient = () => {
                         contact = await msg.getContact();
                         contactName = contact.pushname || contact.name || msg.from;
                     } catch (err) {
-                        console.warn(`⚠️ No se pudo obtener el contacto: ${err.message}`);
+                        console.warn(`⚠️  No se pudo obtener el contacto: ${err.message}`);
                     }
                     const chat = await msg.getChat();
-                    
-                    // Detectar si es un mensaje de voz
-                    const isVoiceMessage = msg.type === 'ptt' || msg.type === 'audio';
                     
                     const messageData = {
                         sessionId: SESSION_ID,
@@ -151,7 +147,6 @@ const startClient = () => {
                         isGroup: chat.isGroup,
                         groupName: chat.isGroup ? chat.name : null,
                         hasMedia: msg.hasMedia,
-                        isVoiceMessage: isVoiceMessage, // 🆕 Flag para mensaje de voz
                         messageId: msg.id._serialized,
                         fromMe: msg.fromMe,
                         // Campos de media (aplanados para facilitar el uso en n8n)
@@ -159,8 +154,7 @@ const startClient = () => {
                         media_file_name: null,
                         media_file_size: null,
                         media_mime_type: null,
-                        media_relative_path: null,
-                        media_base64: null // 🆕 Para transcripción
+                        media_relative_path: null
                     };
 
                     // Descargar y guardar media si está habilitado y el mensaje tiene media
@@ -184,12 +178,6 @@ const startClient = () => {
                                     messageData.media_file_size = mediaData.file_size;
                                     messageData.media_mime_type = mediaData.mime_type;
                                     messageData.media_relative_path = mediaData.relative_path;
-                                    
-                                    // 🆕 Incluir base64 para mensajes de voz
-                                    if (isVoiceMessage) {
-                                        messageData.media_base64 = mediaData.base64_data;
-                                        console.log(`🎤 Mensaje de voz detectado y guardado con base64`);
-                                    }
                                 }
                             }
                         } catch (mediaError) {
@@ -199,12 +187,10 @@ const startClient = () => {
 
                     const messageIcon = msg.fromMe ? '📤' : '📩';
                     const messageType = msg.fromMe ? 'enviado' : 'recibido';
-                    const voiceTag = isVoiceMessage ? '🎤 VOZ' : '';
                     
-                    console.log(`${messageIcon} ${voiceTag} Mensaje ${messageType} (${SESSION_ID}):`, {
+                    console.log(`${messageIcon} Mensaje ${messageType} (${SESSION_ID}):`, {
                         from: messageData.contactName,
                         message: msg.body.substring(0, 100),
-                        type: msg.type,
                         fromMe: msg.fromMe
                     });
 
@@ -291,7 +277,6 @@ app.post('/send', async (req, res) => {
         }
         
         await client.sendMessage(chatId, message);
-        console.log(`✅ Mensaje enviado a ${number}: ${message.substring(0, 50)}...`);
         res.json({ status: 'enviado', number });
     } catch (error) {
         console.error(`❌ Error enviando mensaje (${SESSION_ID}):`, error);
@@ -303,7 +288,7 @@ app.get('/status', (req, res) => {
     res.json({ 
         status: clientReady ? 'ready' : 'not_ready',
         session: SESSION_ID,
-        message: clientReady ? `📋 API WhatsApp (${SESSION_ID}) funcionando` : `⏳ API WhatsApp (${SESSION_ID}) iniciando...`
+        message: clientReady ? `🔋 API WhatsApp (${SESSION_ID}) funcionando` : `⏳ API WhatsApp (${SESSION_ID}) iniciando...`
     });
 });
 

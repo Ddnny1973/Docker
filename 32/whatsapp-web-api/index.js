@@ -1,4 +1,4 @@
-console.log("Versión index.js: 2026-01-28.01");
+console.log("Versión index.js: 2026-01-28.03");
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -97,10 +97,14 @@ const startClient = () => {
             // Si ready no se dispara, usar authenticated como ready
             setTimeout(() => {
                 if (!clientReady) {
-                    console.log(`✅ Activando modo sin ready event (usando authenticated)`);
+                    console.log(`✅ Activando modo sin ready event (usando authenticated después de 5s)`);
                     clientReady = true;
                 }
-            }, 3000);
+            }, 5000);
+        });
+        
+        client.on('loading_screen', (percent, message) => {
+            console.log(`⏳ Cargando... ${percent}% - ${message}`);
         });
         
         client.on('auth_failure', msg => {
@@ -124,8 +128,8 @@ const startClient = () => {
 
         if (ENABLE_RECEIVE_MESSAGES) {
             console.log(`📨 Recepción de mensajes ACTIVADA para sesión: ${SESSION_ID}`);
-            client.on('message_create', async (msg) => {
-                console.log(`🔔 Evento 'message_create' disparado - isStatus: ${msg.isStatus}, fromMe: ${msg.fromMe}, type: ${msg.type}`);
+            client.on('message', async (msg) => {
+                console.log(`🔔 Evento 'message' disparado - isStatus: ${msg.isStatus}, fromMe: ${msg.fromMe}, type: ${msg.type}`);
                 try {
                     if (msg.isStatus) {
                         console.log(`⭐️ Mensaje ignorado: es un estado/story`);
@@ -233,6 +237,7 @@ const startClient = () => {
         }
 
         client.initialize();
+        console.log(`🔄 client.initialize() fue llamado para sesión ${SESSION_ID}`);
 
     } catch (error) {
         console.error(`🔥 Error al inicializar cliente (${SESSION_ID}):`, error);

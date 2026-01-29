@@ -1,4 +1,4 @@
-console.log("Versión index.js: 2026-01-28.01");
+console.log("Versión index.js: 2026-01-28");
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -39,7 +39,7 @@ const saveMediaFile = async (media, messageId, type, contactName) => {
         const timestamp = Date.now();
         const safeName = contactName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
         const mimeType = media.mimetype || 'application/bin';
-        const extension = (mimeType.split('/')[1] || 'bin').split(';')[0];
+        const extension = mimeType.split('/')[1]?.split(';')[0] || 'bin';
         const fileName = `${timestamp}_${safeName}_${messageId.substring(0, 20)}.${extension}`;
         const filePath = path.join(mediaDir, fileName);
         
@@ -94,13 +94,6 @@ const startClient = () => {
         
         client.on('authenticated', () => {
             console.log(`🔐 Cliente autenticado (${SESSION_ID})`);
-            // Si ready no se dispara, usar authenticated como ready
-            setTimeout(() => {
-                if (!clientReady) {
-                    console.log(`✅ Activando modo sin ready event (usando authenticated)`);
-                    clientReady = true;
-                }
-            }, 3000);
         });
         
         client.on('auth_failure', msg => {

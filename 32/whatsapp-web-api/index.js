@@ -12,6 +12,25 @@ const { Client, LocalAuth } = pkg;
 const app = express();
 app.use(express.json());
 
+// Manejo de promesas rechazadas no manejadas
+process.on('unhandledRejection', (reason, promise) => {
+    console.error(`⚠️ Promesa rechazada no manejada en:`, promise, 'razón:', reason);
+    // No terminar el proceso, solo loguear
+});
+
+process.on('uncaughtException', (error) => {
+    console.error(`🔥 Excepción no capturada:`, error);
+    // Reintentar conectar después de un tiempo
+    setTimeout(() => {
+        console.log('🔄 Intentando reiniciar después de excepción...');
+        if (client) {
+            client.destroy().catch(() => {}).then(() => {
+                startClient();
+            });
+        }
+    }, 5000);
+});
+
 const SESSION_ID = process.env.WPP_SESSION_ID || 'default';
 const ENABLE_RECEIVE_MESSAGES = process.env.ENABLE_RECEIVE_MESSAGES === 'true';
 const WEBHOOK_URL = process.env.WEBHOOK_URL || null;
@@ -62,7 +81,7 @@ const saveMediaFile = async (media, messageId, type, contactName) => {
     }
 };
 
-const startClient = () => {
+const startClient = async () => {
     try {
         client = new Client({
             authStrategy: new LocalAuth({ 
@@ -236,8 +255,22 @@ const startClient = () => {
             console.log(`🚫 Recepción de mensajes DESACTIVADA para sesión: ${SESSION_ID}`);
         }
 
-        client.initialize();
-        console.log(`🔄 client.initialize() fue llamado para sesión ${SESSION_ID}`);
+        // Inicializar cliente con timeout
+        try {
+            const initPromise = client.initialize();
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Auth timeout en initialize')), 60000)
+            );
+            
+            await Promise.race([initPromise, timeoutPromise]);
+            console.log(`🔄 client.initialize() completó para sesión ${SESSION_ID}`);
+        } catch (initError) {
+            console.error(`⚠️ Error en initialize (${SESSION_ID}):`, initError.message);
+            // Llamar a initialize de todas formas (puede que funcione en background)
+            client.initialize().catch(err => {
+                console.error(`❌ Error adicional en initialize:`, err.message);
+            });
+        }
 
     } catch (error) {
         console.error(`🔥 Error al inicializar cliente (${SESSION_ID}):`, error);

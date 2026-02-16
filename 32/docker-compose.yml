@@ -148,6 +148,7 @@ services:
     volumes:
       - ./wppapi_data:/app/.wwebjs_auth
       - ./wppapi-media:/app/media
+      - wppapi_tmp:/tmp
     expose:
       - "3000"
 
@@ -161,6 +162,7 @@ services:
     volumes:
       - ./wppapi_mb_data:/app/.wwebjs_auth
       - ./wppapi-mb-media:/app/media
+      - wppapi_mb_tmp:/tmp
     expose:
       - "3000"
 
@@ -178,6 +180,7 @@ services:
     volumes:
       - ./wppapi_ai_data:/app/.wwebjs_auth
       - ./wppapi-ai-media:/app/media
+      - wppapi_ai_tmp:/tmp
     expose:
       - "3000"
 
@@ -195,6 +198,7 @@ services:
     volumes:
       - wppapi_ai_2_data:/app/.wwebjs_auth
       - ./wppapi-ai-2-media:/app/media
+      - wppapi_ai_2_tmp:/tmp
     expose:
       - "3000"
 
@@ -208,6 +212,10 @@ volumes:
   wppapi_ai_data:
   wppapi_mb_data:
   wppapi_ai_2_data:
+  wppapi_tmp:
+  wppapi_mb_tmp:
+  wppapi_ai_tmp:
+  wppapi_ai_2_tmp:
 
 #networks:
 #  n8n-network:

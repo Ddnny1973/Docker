@@ -95,7 +95,12 @@ const startClient = async () => {
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage',
                     '--disable-gpu',
-                    '--no-zygote'
+                    '--no-zygote',
+                    '--disable-sync',
+                    '--disable-sync-types=*',
+                    '--disable-extensions',
+                    '--no-first-run',
+                    '--no-default-browser-check'
                 ]
             }
         });

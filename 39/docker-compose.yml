@@ -1,0 +1,42 @@
+services:
+  metabase:
+    image: metabase/metabase:latest
+    restart: always
+    ports:
+      - "8039:3000"
+    environment:
+      - MB_DB_TYPE=postgres
+      - MB_DB_DBNAME=metabase
+      - MB_DB_PORT=5432
+      - MB_DB_USER=metabase
+      - MB_DB_PASS=metabase_password   # <-- Cambiar
+      - MB_DB_HOST=db-39
+      - MB_SITE_URL=https://analytics.gestorconsultoria.com.co   # <-- Cambiar
+    volumes:
+      - ./metabase/data:/metabase-data
+      - ./metabase/plugins:/plugins
+    depends_on:
+      db-39:
+        condition: service_healthy
+    healthcheck:
+      test: curl --fail http://localhost:3000/api/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  db-39:
+    image: postgres:16
+    restart: always
+    ports:
+      - "9039:5432"
+    volumes:
+      - ./postgresql/data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=metabase
+      - POSTGRES_USER=metabase
+      - POSTGRES_PASSWORD=metabase_password   # <-- Cambiar (igual que arriba)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metabase"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

@@ -1,7 +1,6 @@
-console.log("Versión index.js: 2026-01-28.03");
+console.log("Versión index.js: 2026-02-28.01");
 import dotenv from 'dotenv';
 dotenv.config();
-
 import express from 'express';
 import pkg from 'whatsapp-web.js';
 import qrcode from 'qrcode-terminal';
@@ -12,15 +11,13 @@ const { Client, LocalAuth } = pkg;
 const app = express();
 app.use(express.json());
 
-// Manejo de promesas rechazadas no manejadas
+// Manejo de promesas rechazadas
 process.on('unhandledRejection', (reason, promise) => {
-    console.error(`⚠️ Promesa rechazada no manejada en:`, promise, 'razón:', reason);
-    // No terminar el proceso, solo loguear
+    console.error(`⚠️ Promesa rechazada no manejada:`, reason);
 });
 
 process.on('uncaughtException', (error) => {
     console.error(`🔥 Excepción no capturada:`, error);
-    // Reintentar conectar después de un tiempo
     setTimeout(() => {
         console.log('🔄 Intentando reiniciar después de excepción...');
         if (client) {
@@ -118,10 +115,9 @@ const startClient = async () => {
         
         client.on('authenticated', () => {
             console.log(`🔐 Cliente autenticado (${SESSION_ID})`);
-            // Si ready no se dispara, usar authenticated como ready
             setTimeout(() => {
                 if (!clientReady) {
-                    console.log(`✅ Activando modo sin ready event (usando authenticated después de 5s)`);
+                    console.log(`✅ Activando modo sin ready event`);
                     clientReady = true;
                 }
             }, 5000);
@@ -145,31 +141,35 @@ const startClient = async () => {
                 client.destroy();
                 setTimeout(() => startClient(), 5000);
             } else {
-                console.log(`🛑 Sesión cerrada por LOGOUT - no se reiniciará automáticamente`);
+                console.log(`🛑 Sesión cerrada por LOGOUT`);
                 client.destroy();
             }
         });
 
+        // ⬇️ CAMBIO CRÍTICO 1: Usar message_create en lugar de message
         if (ENABLE_RECEIVE_MESSAGES) {
             console.log(`📨 Recepción de mensajes ACTIVADA para sesión: ${SESSION_ID}`);
-            client.on('message', async (msg) => {
-                console.log(`🔔 Evento 'message' disparado - isStatus: ${msg.isStatus}, fromMe: ${msg.fromMe}, type: ${msg.type}`);
+            
+            client.on('message_create', async (msg) => {
+                console.log(`🔔 Evento 'message_create' disparado - isStatus: ${msg.isStatus}, fromMe: ${msg.fromMe}, type: ${msg.type}`);
+                
                 try {
+                    // Ignorar estados/stories
                     if (msg.isStatus) {
                         console.log(`⭐️ Mensaje ignorado: es un estado/story`);
                         return;
                     }
 
-                    let contact = null;
+                    // ⬇️ CAMBIO CRÍTICO 2: Obtener contacto de forma más simple
                     let contactName = msg.from;
                     try {
-                        contact = await msg.getContact();
-                        contactName = contact.pushname || contact.name || msg.from;
+                        const chat = await msg.getChat();
+                        contactName = chat.name || msg.from;
                     } catch (err) {
-                        console.warn(`⚠️ No se pudo obtener el contacto: ${err.message}`);
+                        console.warn(`⚠️ No se pudo obtener info del chat: ${err.message}`);
                     }
-                    const chat = await msg.getChat();
                     
+                    const chat = await msg.getChat();
                     const isVoiceMessage = msg.type === 'ptt' || msg.type === 'audio';
                     
                     const messageData = {
@@ -215,7 +215,7 @@ const startClient = async () => {
                                     
                                     if (isVoiceMessage) {
                                         messageData.media_base64 = mediaData.base64_data;
-                                        console.log(`🎤 Mensaje de voz detectado y guardado con base64`);
+                                        console.log(`🎤 Mensaje de voz detectado`);
                                     }
                                 }
                             }
@@ -231,7 +231,6 @@ const startClient = async () => {
                     console.log(`${messageIcon} ${voiceTag} Mensaje ${messageType} (${SESSION_ID}):`, {
                         from: messageData.contactName,
                         message: msg.body.substring(0, 100),
-                        type: msg.type,
                         fromMe: msg.fromMe
                     });
 
@@ -246,91 +245,76 @@ const startClient = async () => {
                             if (response.ok) {
                                 console.log(`✅ Mensaje enviado a webhook (${SESSION_ID})`);
                             } else {
-                                console.error(`❌ Error enviando a webhook (${SESSION_ID}): ${response.status}`);
+                                console.error(`❌ Error enviando a webhook: ${response.status}`);
                             }
                         } catch (webhookError) {
-                            console.error(`❌ Error al llamar webhook (${SESSION_ID}):`, webhookError.message);
+                            console.error(`❌ Error llamando webhook:`, webhookError.message);
                         }
                     }
                 } catch (error) {
-                    console.error(`❌ Error procesando mensaje (${SESSION_ID}):`, error);
+                    console.error(`❌ Error procesando mensaje:`, error);
                 }
             });
         } else {
-            console.log(`🚫 Recepción de mensajes DESACTIVADA para sesión: ${SESSION_ID}`);
+            console.log(`🚫 Recepción de mensajes DESACTIVADA`);
         }
 
-        // Inicializar cliente con timeout
         try {
             const initPromise = client.initialize();
             const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Auth timeout en initialize')), 60000)
+                setTimeout(() => reject(new Error('Auth timeout')), 60000)
             );
             
             await Promise.race([initPromise, timeoutPromise]);
-            console.log(`🔄 client.initialize() completó para sesión ${SESSION_ID}`);
+            console.log(`🔄 Cliente inicializado (${SESSION_ID})`);
         } catch (initError) {
-            console.error(`⚠️ Error en initialize (${SESSION_ID}):`, initError.message);
-            // Llamar a initialize de todas formas (puede que funcione en background)
+            console.error(`⚠️ Error en initialize:`, initError.message);
             client.initialize().catch(err => {
-                console.error(`❌ Error adicional en initialize:`, err.message);
+                console.error(`❌ Error adicional:`, err.message);
             });
         }
-
     } catch (error) {
-        console.error(`🔥 Error al inicializar cliente (${SESSION_ID}):`, error);
+        console.error(`🔥 Error inicializando cliente:`, error);
         setTimeout(() => startClient(), 10000);
     }
 };
 
 startClient();
 
+// ⬇️ CAMBIO CRÍTICO 3: Simplificar el envío sin verificación previa
 app.post('/send', async (req, res) => {
     const { number, message } = req.body;
-    if (!number || !message) return res.status(400).json({ error: 'number y message son requeridos' });
+    
+    if (!number || !message) {
+        return res.status(400).json({ error: 'number y message son requeridos' });
+    }
 
     if (!clientReady || !client) {
-        return res.status(503).json({ error: 'Cliente WhatsApp no está listo. Intenta nuevamente en unos segundos.' });
+        return res.status(503).json({ 
+            error: 'Cliente WhatsApp no está listo. Intenta en unos segundos.' 
+        });
     }
 
     try {
         const chatId = `${number}@c.us`;
         
-        let isRegistered = false;
-        let retries = 3;
-        
-        while (retries > 0 && !isRegistered) {
-            try {
-                isRegistered = await Promise.race([
-                    client.isRegisteredUser(chatId),
-                    new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error('Timeout verificando usuario')), 5000)
-                    )
-                ]);
-                break;
-            } catch (error) {
-                retries--;
-                if (retries === 0) {
-                    console.error(`❌ Error verificando usuario después de reintentos:`, error.message);
-                    console.log(`⚠️ Intentando enviar mensaje sin verificación previa...`);
-                    break;
-                }
-                console.log(`⚠️ Reintentando verificación de usuario... (${retries} intentos restantes)`);
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-        }
-        
-        if (!isRegistered && retries === 0) {
-            console.log(`⚠️ Enviando mensaje sin verificación confirmada a ${number}`);
-        } else if (!isRegistered) {
-            return res.status(404).json({ error: 'Usuario no registrado en WhatsApp' });
-        }
-        
+        // ⬇️ ENVÍO DIRECTO SIN VERIFICACIÓN PREVIA
         await client.sendMessage(chatId, message);
         console.log(`✅ Mensaje enviado a ${number}: ${message.substring(0, 50)}...`);
+        
         res.json({ status: 'enviado', number });
     } catch (error) {
-        console.error(`❌ Error enviando mensaje (${SESSION_ID}):`, error);
+        console.error(`❌ Error enviando mensaje:`, error);
+        
+        // Si falla, el número probablemente no existe
+        if (error.message.includes('no WhatsApp account') || 
+            error.message.includes('not found')) {
+            return res.status(404).json({ 
+                error: 'Usuario no registrado en WhatsApp',
+                number 
+            });
+        }
+        
         res.status(500).json({ error: error.toString() });
     }
 });
@@ -339,8 +323,12 @@ app.get('/status', (req, res) => {
     res.json({ 
         status: clientReady ? 'ready' : 'not_ready',
         session: SESSION_ID,
-        message: clientReady ? `📋 API WhatsApp (${SESSION_ID}) funcionando` : `⏳ API WhatsApp (${SESSION_ID}) iniciando...`
+        message: clientReady ? 
+            `📋 API WhatsApp (${SESSION_ID}) funcionando` : 
+            `⏳ API WhatsApp (${SESSION_ID}) iniciando...`
     });
 });
 
-app.listen(3000, () => console.log(`🚀 API WhatsApp (${SESSION_ID}) escuchando en puerto 3000`));
+app.listen(3000, () => {
+    console.log(`🚀 API WhatsApp (${SESSION_ID}) escuchando en puerto 3000`);
+});

@@ -1,4 +1,4 @@
-console.log("Versión index.js: 2026-02-28.01");
+console.log("Versión index.js: 2026-03-05.01");
 import dotenv from 'dotenv';
 dotenv.config();
 import express from 'express';
@@ -87,6 +87,7 @@ const startClient = async () => {
             }),
             puppeteer: {
                 headless: true,
+                protocolTimeout: 120000,  // ⬅️ FIX 1: 120 segundos timeout
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
@@ -146,7 +147,6 @@ const startClient = async () => {
             }
         });
 
-        // ⬇️ CAMBIO CRÍTICO 1: Usar message_create en lugar de message
         if (ENABLE_RECEIVE_MESSAGES) {
             console.log(`📨 Recepción de mensajes ACTIVADA para sesión: ${SESSION_ID}`);
             
@@ -160,16 +160,17 @@ const startClient = async () => {
                         return;
                     }
 
-                    // ⬇️ CAMBIO CRÍTICO 2: Obtener contacto de forma más simple
+                    // Obtener nombre del contacto
                     let contactName = msg.from;
+                    let chat = null;
+                    
                     try {
-                        const chat = await msg.getChat();
+                        chat = await msg.getChat();
                         contactName = chat.name || msg.from;
                     } catch (err) {
                         console.warn(`⚠️ No se pudo obtener info del chat: ${err.message}`);
                     }
                     
-                    const chat = await msg.getChat();
                     const isVoiceMessage = msg.type === 'ptt' || msg.type === 'audio';
                     
                     const messageData = {
@@ -179,8 +180,8 @@ const startClient = async () => {
                         contactName: contactName,
                         body: msg.body,
                         type: msg.type,
-                        isGroup: chat.isGroup,
-                        groupName: chat.isGroup ? chat.name : null,
+                        isGroup: chat?.isGroup || false,
+                        groupName: chat?.isGroup ? chat.name : null,
                         hasMedia: msg.hasMedia,
                         isVoiceMessage: isVoiceMessage,
                         messageId: msg.id._serialized,
@@ -193,19 +194,27 @@ const startClient = async () => {
                         media_base64: null
                     };
 
+                    // ⬇️ FIX 2: Descarga de media con timeout y manejo de errores
                     if (SAVE_MEDIA && msg.hasMedia) {
                         try {
                             console.log(`📥 Intentando descargar media (${msg.type})...`);
                             
-                            // Timeout manual de 30 segundos
-                            const DOWNLOAD_TIMEOUT = 30000;
+                            // Timeout manual de 45 segundos
+                            const DOWNLOAD_TIMEOUT = 45000;
                             
                             const media = await Promise.race([
                                 msg.downloadMedia(),
                                 new Promise((_, reject) => 
                                     setTimeout(() => reject(new Error('Download timeout')), DOWNLOAD_TIMEOUT)
                                 )
-                            ]);
+                            ]).catch(error => {
+                                if (error.message.includes('timeout') || error.message.includes('Timeout')) {
+                                    console.warn(`⏱️ Timeout descargando media después de ${DOWNLOAD_TIMEOUT/1000}s`);
+                                } else {
+                                    console.warn(`⚠️ Error descargando media: ${error.message}`);
+                                }
+                                return null;
+                            });
                             
                             if (media) {
                                 console.log(`✅ Media descargado exitosamente`);
@@ -228,15 +237,12 @@ const startClient = async () => {
                                         console.log(`🎤 Audio descargado con base64 para transcripción`);
                                     }
                                 }
+                            } else {
+                                console.log(`⚠️ Continuando sin media - se envió solo metadata`);
+                                messageData.media_download_error = 'timeout or download failed';
                             }
                         } catch (mediaError) {
-                            if (mediaError.message.includes('timeout') || mediaError.message.includes('Timeout')) {
-                                console.warn(`⏱️ Timeout descargando media - se envía sin archivo adjunto`);
-                            } else {
-                                console.error(`❌ Error descargando media:`, mediaError.message);
-                            }
-                            
-                            // IMPORTANTE: No detener el flujo, continuar enviando el webhook sin media
+                            console.error(`❌ Error inesperado procesando media:`, mediaError.message);
                             messageData.media_download_error = mediaError.message;
                         }
                     }
@@ -298,7 +304,7 @@ const startClient = async () => {
 
 startClient();
 
-// ⬇️ CAMBIO CRÍTICO 3: Simplificar el envío sin verificación previa
+// ⬇️ FIX 3: Endpoint de envío mejorado para manejar grupos
 app.post('/send', async (req, res) => {
     const { number, message } = req.body;
     
@@ -313,17 +319,32 @@ app.post('/send', async (req, res) => {
     }
 
     try {
-        const chatId = `${number}@c.us`;
+        // Determinar si es grupo o contacto individual
+        let chatId;
         
-        // ⬇️ ENVÍO DIRECTO SIN VERIFICACIÓN PREVIA
+        if (number.includes('@g.us')) {
+            // Ya viene con formato de grupo
+            chatId = number;
+        } else if (number.includes('@c.us')) {
+            // Ya viene con formato de contacto
+            chatId = number;
+        } else if (number.includes('@')) {
+            // Ya tiene algún sufijo, usar tal cual
+            chatId = number;
+        } else {
+            // Solo número, asumir que es contacto individual
+            chatId = `${number}@c.us`;
+        }
+        
+        console.log(`📤 Enviando mensaje a: ${chatId}`);
+        
         await client.sendMessage(chatId, message);
-        console.log(`✅ Mensaje enviado a ${number}: ${message.substring(0, 50)}...`);
+        console.log(`✅ Mensaje enviado a ${chatId}: ${message.substring(0, 50)}...`);
         
-        res.json({ status: 'enviado', number });
+        res.json({ status: 'enviado', number: chatId });
     } catch (error) {
         console.error(`❌ Error enviando mensaje:`, error);
         
-        // Si falla, el número probablemente no existe
         if (error.message.includes('no WhatsApp account') || 
             error.message.includes('not found')) {
             return res.status(404).json({ 

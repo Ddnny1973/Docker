@@ -195,10 +195,20 @@ const startClient = async () => {
 
                     if (SAVE_MEDIA && msg.hasMedia) {
                         try {
-                            console.log(`📥 Descargando media (${msg.type})...`);
-                            const media = await msg.downloadMedia();
+                            console.log(`📥 Intentando descargar media (${msg.type})...`);
+                            
+                            // Timeout manual de 30 segundos
+                            const DOWNLOAD_TIMEOUT = 30000;
+                            
+                            const media = await Promise.race([
+                                msg.downloadMedia(),
+                                new Promise((_, reject) => 
+                                    setTimeout(() => reject(new Error('Download timeout')), DOWNLOAD_TIMEOUT)
+                                )
+                            ]);
                             
                             if (media) {
+                                console.log(`✅ Media descargado exitosamente`);
                                 const mediaData = await saveMediaFile(
                                     media, 
                                     msg.id._serialized, 
@@ -215,12 +225,19 @@ const startClient = async () => {
                                     
                                     if (isVoiceMessage) {
                                         messageData.media_base64 = mediaData.base64_data;
-                                        console.log(`🎤 Mensaje de voz detectado`);
+                                        console.log(`🎤 Audio descargado con base64 para transcripción`);
                                     }
                                 }
                             }
                         } catch (mediaError) {
-                            console.error(`❌ Error descargando media:`, mediaError);
+                            if (mediaError.message.includes('timeout') || mediaError.message.includes('Timeout')) {
+                                console.warn(`⏱️ Timeout descargando media - se envía sin archivo adjunto`);
+                            } else {
+                                console.error(`❌ Error descargando media:`, mediaError.message);
+                            }
+                            
+                            // IMPORTANTE: No detener el flujo, continuar enviando el webhook sin media
+                            messageData.media_download_error = mediaError.message;
                         }
                     }
 

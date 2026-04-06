@@ -1,0 +1,23 @@
+services:
+  openclaw-gateway:
+    image: ghcr.io/openclaw/openclaw:latest
+    container_name: openclaw-gateway
+    restart: always
+    ports:
+      - "8040:18789" # Puerto para tu Proxy Inverso (Nginx)
+    environment:
+      - OPENCLAW_SANDBOX=1 # ACTIVA EL AISLAMIENTO TOTAL
+      - OPENCLAW_GATEWAY_BIND=lan
+      - NODE_ENV=production
+    volumes:
+      - ./config:/home/node/.openclaw
+      - ./workspace:/home/node/.openclaw/workspace
+      # MUY IMPORTANTE: El sandbox necesita el socket de Docker para
+      # crear los contenedores temporales aislados del agente.
+      - /var/run/docker.sock:/var/run/docker.sock 
+    networks:
+      - openclaw_isolated
+
+networks:
+  openclaw_isolated:
+    name: openclaw_net

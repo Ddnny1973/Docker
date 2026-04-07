@@ -80,7 +80,7 @@ Resources:
           Start-Process -FilePath "msiexec.exe" -ArgumentList "/i $output /qn" -Wait
           Write-Host "CloudWatch Agent instalado"
           
-          # Crear configuración del CloudWatch Agent
+          # Crear configuración
           $ConfigPath = "C:\ProgramData\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent.json"
           $Config = @{
             "metrics" = @{
@@ -103,6 +103,7 @@ Resources:
                     @{
                       "event_name" = "System"
                       "event_levels" = @("CRITICAL", "ERROR")
+                      "log_group_name" = "/aws/ec2/gcbdatos-v2"
                     }
                   )
                 }
@@ -112,13 +113,17 @@ Resources:
           
           Write-Host "Creando archivo de configuración..."
           New-Item -Path (Split-Path -Path $ConfigPath) -ItemType Directory -Force | Out-Null
+          New-Item -Path "C:\ProgramData\Amazon\AmazonCloudWatchAgent\Crawlers" -ItemType Directory -Force | Out-Null
           $Config | Out-File -FilePath $ConfigPath -Encoding ASCII -Force
-          Write-Host "Configuracion creada en $ConfigPath"
           
-          # Iniciar el servicio CloudWatch Agent
+          Write-Host "Aplicando configuración..."
+          Start-Sleep -Seconds 5
+          & "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent.exe" config-downloader -download-source file:"$ConfigPath" -output-dir "C:\ProgramData\Amazon\AmazonCloudWatchAgent\Crawlers" -mode ec2
+          
           Write-Host "Iniciando CloudWatch Agent..."
           Start-Service -Name "AmazonCloudWatchAgent" -ErrorAction SilentlyContinue
-          Write-Host "CloudWatch Agent iniciado exitosamente"
+          Start-Sleep -Seconds 3
+          Write-Host "CloudWatch Agent iniciado"
           </powershell>
       Tags:
         - Key: Name

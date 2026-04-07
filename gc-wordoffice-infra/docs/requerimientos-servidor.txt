@@ -1,0 +1,18 @@
+=== DATOS CLOUDFORMATION TEMPLATE ===
+
+VPC ID:                    vpc-080595ca708f9c798
+Subnet ID:                 subnet-03cfca5de2aee6b11
+Availability Zone:         us-east-2a
+Security Group ID:         sg-05b02a26f9b9a820b
+Key Pair Name:             key-040748ca02534c2bd
+AMI ID (Win2022):          ami-08c41c6041bf318eb
+EBS Size (GB):             200
+EBS Type:                  gp3
+Stack Name:                gc-wordoffice-gcbdatos-v2
+Environment:               prod
+Owner:                     gcsoporte
+Encrypted EBS:             false
+
+=== NETWORKING ===
+RDP Source:                [IP o SG]
+SQL Port Source:           [IP o SG]

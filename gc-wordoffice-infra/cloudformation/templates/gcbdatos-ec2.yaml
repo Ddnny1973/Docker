@@ -1,0 +1,137 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template para EC2 gcbdatos-v2 - Wordoffice Grupo Contable'
+
+Parameters:
+  InstanceType:
+    Type: String
+    Default: t3.large
+    Description: Tipo de instancia EC2
+    AllowedValues:
+      - t3.large
+      - t3.xlarge
+      - r5a.large
+      - r6a.large
+
+  EbsVolumeSize:
+    Type: Number
+    Default: 200
+    Description: Tamaño en GB del volumen EBS
+
+Resources:
+  EC2CloudWatchRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: gc-wordoffice-cloudwatch-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Tags:
+        - Key: Name
+          Value: gc-wordoffice-cw-role
+        - Key: Owner
+          Value: gcsoporte
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref EC2CloudWatchRole
+
+  GCBDatosInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-058f0cf1cc0bc26b3
+      InstanceType: !Ref InstanceType
+      KeyName: GC-v2
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      DisableApiTermination: true
+      SecurityGroupIds:
+        - sg-05b02a26f9b9a820b
+      SubnetId: subnet-03cfca5de2aee6b11
+      AvailabilityZone: us-east-2a
+      MetadataOptions:
+        HttpEndpoint: enabled
+        HttpPutResponseHopLimit: 2
+        HttpTokens: required
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: !Ref EbsVolumeSize
+            VolumeType: gp3
+            Iops: 3000
+            DeleteOnTermination: true
+            Encrypted: false
+      UserData:
+        Fn::Base64: |
+          <powershell>
+          $ProgressPreference = "SilentlyContinue"
+          Write-Host "Descargando CloudWatch Agent..."
+          $url = "https://s3.amazonaws.com/amazoncloudwatch-agent/windows/amd64/latest/amazon-cloudwatch-agent.msi"
+          $output = "C:\amazon-cloudwatch-agent.msi"
+          Invoke-WebRequest -Uri $url -OutFile $output
+          Write-Host "Instalando CloudWatch Agent..."
+          Start-Process -FilePath "msiexec.exe" -ArgumentList "/i $output /qn" -Wait
+          Write-Host "CloudWatch Agent instalado"
+          
+          # Crear configuración del CloudWatch Agent
+          $ConfigPath = "C:\ProgramData\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent.json"
+          $Config = @{
+            "metrics" = @{
+              "namespace" = "GCBDatos"
+              "metrics_collected" = @{
+                "mem" = @{
+                  "measurement" = @("mem_used_percent")
+                  "metrics_collection_interval" = 300
+                }
+                "disk" = @{
+                  "measurement" = @("used_percent")
+                  "metrics_collection_interval" = 300
+                }
+              }
+            }
+            "logs" = @{
+              "logs_collected" = @{
+                "windows_events" = @{
+                  "collect_list" = @(
+                    @{
+                      "event_name" = "System"
+                      "event_levels" = @("CRITICAL", "ERROR")
+                    }
+                  )
+                }
+              }
+            }
+          } | ConvertTo-Json -Depth 10
+          
+          Write-Host "Creando archivo de configuración..."
+          New-Item -Path (Split-Path -Path $ConfigPath) -ItemType Directory -Force | Out-Null
+          $Config | Out-File -FilePath $ConfigPath -Encoding ASCII -Force
+          Write-Host "Configuracion creada en $ConfigPath"
+          
+          # Iniciar el servicio CloudWatch Agent
+          Write-Host "Iniciando CloudWatch Agent..."
+          Start-Service -Name "AmazonCloudWatchAgent" -ErrorAction SilentlyContinue
+          Write-Host "CloudWatch Agent iniciado exitosamente"
+          </powershell>
+      Tags:
+        - Key: Name
+          Value: gcbdatos-v2
+        - Key: Owner
+          Value: gcsoporte
+        - Key: Service
+          Value: Wordoffice-Database
+
+Outputs:
+  InstanceId:
+    Value: !Ref GCBDatosInstance
+  PrivateIpAddress:
+    Value: !GetAtt GCBDatosInstance.PrivateIpAddress
+  SecurityGroupId:
+    Value: sg-05b02a26f9b9a820b

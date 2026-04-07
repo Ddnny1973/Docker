@@ -1,0 +1,48 @@
+# Parámetros para gcbdatos-v2
+# Usado en: gcbdatos-ec2.yaml
+
+Parameters:
+  InstanceType:
+    Default: t3.large
+    Description: Tipo inicial recomendado basado en CloudWatch (CPU 47.5% máx)
+    Options:
+      - t3.large (8GB RAM, 2vCPU) - RECOMENDADO inicial
+      - t3.xlarge (16GB RAM, 4vCPU) - Si CloudWatch Agent muestra >8GB
+      - r5a.large (16GB RAM, 2vCPU) - Si necesitas más RAM pero menos vCPU
+      - r6a.large (16GB RAM, 2vCPU) - Alternativa r5a
+
+  EbsVolumeSize:
+    Default: 200
+    Description: Tamaño volumen (200GB estimado para BD actual)
+    Note: Puede aumentar después sin problemas
+
+  KeyPair:
+    Value: key-040748ca02534c2bd
+    Description: Para acceso RDP administrativo inicial
+    Note: Cambiar después de primer login
+
+  VPC:
+    Value: vpc-080595ca708f9c798
+    Description: VPC donde se crea la instancia
+
+  Subnet:
+    Value: subnet-03cfca5de2aee6b11
+    AvailabilityZone: us-east-2a
+    Description: Subnet (misma VPC que gcbdatos actual)
+
+  SecurityGroup:
+    Value: sg-05b02a26f9b9a820b
+    Description: SG reutilizado (ya tiene reglas RDP y SQL)
+
+  AMI:
+    Value: ami-08c41c6041bf318eb
+    OS: Windows Server 2022 Base
+    Region: us-east-2
+    Description: Imagen oficial AWS (última versión 2022)
+
+# Notas operacionales
+Notes:
+  - CloudWatch Agent se instala automáticamente via UserData
+  - Después de deploy, monitorear RAM por 1 semana
+  - Si RAM > 8GB, cambiar InstanceType a r5a.large
+  - EBS Encrypted: false (cambiar a true si requieren)

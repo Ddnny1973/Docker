@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'CloudFormation template para EC2 gcbdatos-v2 - Wordoffice Grupo Contable'
+Description: 'CloudFormation template para EC2 - Wordoffice Grupo Contable (gcbdatos-v2 + gcusers-v2)'
 
 Parameters:
   InstanceType:
@@ -11,11 +11,6 @@ Parameters:
       - t3.xlarge
       - r5a.large
       - r6a.large
-
-  EbsVolumeSize:
-    Type: Number
-    Default: 200
-    Description: Tamaño en GB del volumen EBS
 
 Resources:
   EC2CloudWatchRole:
@@ -63,7 +58,7 @@ Resources:
       BlockDeviceMappings:
         - DeviceName: /dev/sda1
           Ebs:
-            VolumeSize: !Ref EbsVolumeSize
+            VolumeSize: 200
             VolumeType: gp3
             Iops: 3000
             DeleteOnTermination: true
@@ -133,10 +128,123 @@ Resources:
         - Key: Service
           Value: Wordoffice-Database
 
+  GCUsersInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-058f0cf1cc0bc26b3
+      InstanceType: !Ref InstanceType
+      KeyName: GC-v2
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      DisableApiTermination: true
+      SecurityGroupIds:
+        - sg-05b02a26f9b9a820b
+      SubnetId: subnet-03cfca5de2aee6b11
+      AvailabilityZone: us-east-2a
+      MetadataOptions:
+        HttpEndpoint: enabled
+        HttpPutResponseHopLimit: 2
+        HttpTokens: required
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 100
+            VolumeType: gp3
+            Iops: 3000
+            DeleteOnTermination: true
+            Encrypted: false
+      UserData:
+        Fn::Base64: |
+          <powershell>
+          $ProgressPreference = "SilentlyContinue"
+          Write-Host "=== Inicializando gcusers-v2 ==="
+          
+          Write-Host "Instalando CloudWatch Agent..."
+          $url = "https://s3.amazonaws.com/amazoncloudwatch-agent/windows/amd64/latest/amazon-cloudwatch-agent.msi"
+          $output = "C:\amazon-cloudwatch-agent.msi"
+          Invoke-WebRequest -Uri $url -OutFile $output
+          Start-Process -FilePath "msiexec.exe" -ArgumentList "/i $output /qn" -Wait
+          
+          $ConfigPath = "C:\ProgramData\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent.json"
+          $Config = @{
+            "metrics" = @{
+              "namespace" = "GCUsers"
+              "metrics_collected" = @{
+                "mem" = @{
+                  "measurement" = @("mem_used_percent")
+                  "metrics_collection_interval" = 300
+                }
+                "disk" = @{
+                  "measurement" = @("used_percent")
+                  "metrics_collection_interval" = 300
+                }
+              }
+            }
+            "logs" = @{
+              "logs_collected" = @{
+                "windows_events" = @(
+                  @{
+                    "event_name" = "System"
+                    "event_levels" = @("CRITICAL", "ERROR")
+                    "log_group_name" = "/aws/ec2/gcusers-v2"
+                  },
+                  @{
+                    "event_name" = "Security"
+                    "event_levels" = @("CRITICAL", "ERROR", "WARNING")
+                    "log_group_name" = "/aws/ec2/gcusers-v2-security"
+                  }
+                )
+              }
+            }
+          } | ConvertTo-Json -Depth 10
+          
+          New-Item -Path (Split-Path -Path $ConfigPath) -ItemType Directory -Force | Out-Null
+          New-Item -Path "C:\ProgramData\Amazon\AmazonCloudWatchAgent\Crawlers" -ItemType Directory -Force | Out-Null
+          $Config | Out-File -FilePath $ConfigPath -Encoding ASCII -Force
+          
+          Start-Sleep -Seconds 5
+          & "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent.exe" config-downloader -download-source file:"$ConfigPath" -output-dir "C:\ProgramData\Amazon\AmazonCloudWatchAgent\Crawlers" -mode ec2
+          
+          Start-Service -Name "AmazonCloudWatchAgent" -ErrorAction SilentlyContinue
+          Start-Sleep -Seconds 3
+          
+          Write-Host "=== Configurando RDS (Remote Desktop Services) ==="
+          Write-Host "Habilitando RDS..."
+          Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
+          
+          Write-Host "Instalando servicio RDS..."
+          Install-WindowsFeature "RDS-RD-Server" -IncludeManagementTools
+          
+          Write-Host "Configurando licencias (20 usuarios)..."
+          New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\TerminalServer\RCM\Licensing Core" -Force -ErrorAction SilentlyContinue
+          Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\RCM\Licensing Core" -Name "LicenseServers" -Value "localhost"
+          
+          Write-Host "=== gcusers-v2 configurado. Validar licencia manualmente ==="
+          </powershell>
+      Tags:
+        - Key: Name
+          Value: gcusers-v2
+        - Key: Owner
+          Value: gcsoporte
+        - Key: Service
+          Value: RDP-Users-Server
+
 Outputs:
-  InstanceId:
+  GCBDatosInstanceId:
     Value: !Ref GCBDatosInstance
-  PrivateIpAddress:
+    Description: ID de la instancia gcbdatos-v2
+  
+  GCBDatosPrivateIp:
     Value: !GetAtt GCBDatosInstance.PrivateIpAddress
+    Description: IP privada de gcbdatos-v2
+  
+  GCUsersInstanceId:
+    Value: !Ref GCUsersInstance
+    Description: ID de la instancia gcusers-v2
+  
+  GCUsersPrivateIp:
+    Value: !GetAtt GCUsersInstance.PrivateIpAddress
+    Description: IP privada de gcusers-v2
+  
   SecurityGroupId:
     Value: sg-05b02a26f9b9a820b
+    Description: Security Group utilizado por ambas instancias

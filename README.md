@@ -29,3 +29,6 @@ docker run --rm --network xx_default -v ./config:/etc/odoo odoo:18 --init=base -
 Importante: La carpeta config debe contener el archivo odoo.conf
 
 Puedes ajustar los parámetros según tus necesidades.
+
+Actualizaciones importantes:
+apt update && apt install -y libxml2-dev libxslt-dev python3-dev gcc

@@ -4,19 +4,19 @@ services:
     user: root
     restart: "always"
     depends_on:
-      db-41:
+      db-42:
         condition: service_healthy
     ports:
-     - "8041:8069"
-     - "8079:8072"
+     - "8042:8069"
+     - "8090:8072"
     environment:
-     - HOST=db-41
+     - HOST=db-42
      - PORT=5432
      - USER=odoo
      - PASSWORD=odoo
      - POSTGRES_DB=odoo
      - ODOO_WORKERS=2
-     - ODOO_LONGPOLLING_PORT=8076
+     - ODOO_LONGPOLLING_PORT=8072
     volumes:
      - ./config:/etc/odoo
      - ./filestore:/var/lib/odoo/filestore
@@ -29,11 +29,11 @@ services:
      timeout: 10s
      retries: 5
 
-  db-41:
+  db-42:
     image: postgres:16
     restart: "always"
     ports:
-     - "9041:5432"
+     - "9042:5432"
     volumes:
      - ./postgresql/data:/var/lib/postgresql/data
     environment:

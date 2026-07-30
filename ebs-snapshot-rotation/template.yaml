@@ -62,14 +62,17 @@ Resources:
                 Action: ec2:CreateSnapshot
                 # No se conoce el volume-id en tiempo de despliegue (se resuelve
                 # en runtime a partir del instance-id), por eso se permite sobre
-                # todos los volúmenes/snapshots de la cuenta en esta región.
+                # todos los volúmenes de la cuenta en esta región. El recurso
+                # "snapshot" destino de CreateSnapshot NO lleva Account ID: el
+                # snapshot todavía no existe/no tiene dueño en el momento de
+                # evaluar el permiso (quirk documentado de IAM para EC2).
                 Resource:
                   - !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*"
-                  - !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:snapshot/*"
+                  - !Sub "arn:aws:ec2:${AWS::Region}::snapshot/*"
               - Sid: TaggearSnapshotsPropios
                 Effect: Allow
                 Action: ec2:CreateTags
-                Resource: !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:snapshot/*"
+                Resource: !Sub "arn:aws:ec2:${AWS::Region}::snapshot/*"
                 Condition:
                   StringEquals:
                     ec2:CreateAction: CreateSnapshot

@@ -1,0 +1,127 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Rotación automática de snapshots EBS (Lun-Sáb). Crea el rol de IAM,
+  la función Lambda y la regla de EventBridge que la invoca a diario.
+
+Parameters:
+  BDInstanceId:
+    Type: String
+    Description: Instance ID de la instancia de BD (gcdatos-v2-r), ej. i-0e04b97a8d5031545
+
+  UsersInstanceId:
+    Type: String
+    Default: ""
+    Description: Instance ID de la instancia de usuarios (gcusers-v2, opcional, solo se snapshotea los sábados)
+
+  CodeS3Bucket:
+    Type: String
+    Default: grpcntbl-backup
+    Description: Bucket S3 donde subiste function.zip
+
+  CodeS3Key:
+    Type: String
+    Default: lambda-artifacts/snapshot-rotation/function.zip
+    Description: Ruta (key) del function.zip dentro del bucket
+
+  ScheduleExpression:
+    Type: String
+    Default: "cron(0 8 ? * MON-SAT *)"
+    Description: Horario UTC de ejecución (por defecto 08:00 UTC = 03:00 Colombia, Lun-Sáb)
+
+Resources:
+
+  # Rol que la Lambda asume para poder llamar a EC2 y escribir logs.
+  SnapshotRotationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: snapshot-rotation-lambda-role
+      # "Quién puede usar este rol": solo el servicio Lambda.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: snapshot-rotation-permissions
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: DescribeSiempre
+                Effect: Allow
+                Action:
+                  - ec2:DescribeSnapshots
+                  - ec2:DescribeVolumes
+                  - ec2:DescribeInstances
+                Resource: "*"
+              - Sid: CrearSnapshotDeVolumenesYEtiquetar
+                Effect: Allow
+                Action: ec2:CreateSnapshot
+                # No se conoce el volume-id en tiempo de despliegue (se resuelve
+                # en runtime a partir del instance-id), por eso se permite sobre
+                # todos los volúmenes/snapshots de la cuenta en esta región.
+                Resource:
+                  - !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*"
+                  - !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:snapshot/*"
+              - Sid: TaggearSnapshotsPropios
+                Effect: Allow
+                Action: ec2:CreateTags
+                Resource: !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:snapshot/*"
+                Condition:
+                  StringEquals:
+                    ec2:CreateAction: CreateSnapshot
+              - Sid: BorrarSoloSnapshotsCreadosPorEstaLambda
+                Effect: Allow
+                Action: ec2:DeleteSnapshot
+                Resource: !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:snapshot/*"
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/ManagedBy: snapshot-rotation-lambda
+
+  SnapshotRotationFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: snapshot-rotation
+      Runtime: python3.12
+      Handler: lambda_function.handler
+      Role: !GetAtt SnapshotRotationRole.Arn
+      Timeout: 30
+      Code:
+        S3Bucket: !Ref CodeS3Bucket
+        S3Key: !Ref CodeS3Key
+      Environment:
+        Variables:
+          REGION: !Ref AWS::Region
+          BD_INSTANCE_ID: !Ref BDInstanceId
+          USERS_INSTANCE_ID: !Ref UsersInstanceId
+
+  # Regla que dispara la Lambda todos los días Lun-Sáb.
+  SnapshotRotationSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: snapshot-rotation-daily
+      ScheduleExpression: !Ref ScheduleExpression
+      State: ENABLED
+      Targets:
+        - Id: SnapshotRotationLambdaTarget
+          Arn: !GetAtt SnapshotRotationFunction.Arn
+
+  # Permiso para que EventBridge pueda invocar la Lambda.
+  PermisoEventBridgeInvocaLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SnapshotRotationFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt SnapshotRotationSchedule.Arn
+
+Outputs:
+  FunctionName:
+    Value: !Ref SnapshotRotationFunction
+  RoleArn:
+    Value: !GetAtt SnapshotRotationRole.Arn
+  ScheduleRule:
+    Value: !Ref SnapshotRotationSchedule

@@ -11,6 +11,12 @@ Server-side paths (hardcoded in scripts, do not "fix" them):
 
 Docs and git commits are in **Spanish** — keep that convention. Push to `origin/trunk` (origin/HEAD); commits use conventional prefixes (`feat:`, `fix:`, ...).
 
+## Cerebro digital del repo
+
+- Antes de responder preguntas sobre este repo, revisa `docs/brain/_index.md` y sigue sus enlaces si el tema es relevante.
+- Si tu cambio de código deja desactualizado, incorrecto o incompleto algún archivo de `docs/brain/`, actualízalo como parte del mismo PR (no lo dejes para después) y actualiza su campo `updated` en el frontmatter.
+- Si detectas que falta documentar un concepto nuevo relevante (componente, proceso, decisión), proponle al usuario crear un archivo nuevo en `docs/brain/` en vez de dejarlo sin documentar.
+
 ## Layout
 
 - Numbered dirs (`16`, `29`–`42`) = independent compose projects, one per app instance. Run from inside the dir: `docker compose up -d`.
@@ -21,7 +27,7 @@ Docs and git commits are in **Spanish** — keep that convention. Push to `origi
 
 ## Port convention
 
-Project `N` publishes its main app on host port `80NN` and its Postgres on `90NN` (`30`→8030/9030, `41`→8041/9041, `39`→8039/9039). Inside compose, Postgres is always hostname `db-<NN>`. Odoo 18 instances also map longpoll 8072 to host `80NN+30` (e.g. 8076, 8079, 8090).
+Project `N` publishes its main app on host port `80NN` and its Postgres on `90NN` (`30`→8030/9030, `41`→8041/9041, `39`→8039/9039). Inside compose, Postgres is always hostname `db-<NN>`. Odoo 18 instances also map longpoll 8072 to a host port that varies per instance (no formula — check the compose: `36`→8076, `37`→8077, `38`→8078, `41`→8079, `42`→8090).
 
 ## Backup / retention
 

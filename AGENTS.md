@@ -17,6 +17,10 @@ Docs and git commits are in **Spanish** — keep that convention. Push to `origi
 - Si tu cambio de código deja desactualizado, incorrecto o incompleto algún archivo de `docs/brain/`, actualízalo como parte del mismo PR (no lo dejes para después) y actualiza su campo `updated` en el frontmatter.
 - Si detectas que falta documentar un concepto nuevo relevante (componente, proceso, decisión), proponle al usuario crear un archivo nuevo en `docs/brain/` en vez de dejarlo sin documentar.
 
+## Control de ramas
+
+- Antes de modificar o crear archivos, valida la rama actual. Si estás en `trunk`, crea una rama de trabajo (ej. `feat/...`, `docs/...`). Si estás en otra rama, pregunta antes de operar.
+
 ## Layout
 
 - Numbered dirs (`16`, `29`–`42`) = independent compose projects, one per app instance. Run from inside the dir: `docker compose up -d`.

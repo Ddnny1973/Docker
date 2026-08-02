@@ -56,6 +56,24 @@ aws lambda update-function-code --function-name snapshot-rotation --s3-bucket gr
 CloudFormation haz "Update stack" con el mismo template para que Lambda tome
 el nuevo código).
 
+## Invocación manual (payload)
+
+La lambda acepta un `accion` en el payload para forzar rotaciones cualquier
+día, sin afectar el comportamiento del cron:
+
+```json
+{ "accion": "semanal" }
+```
+
+- Sin `accion` (o evento del cron): comportamiento por defecto (diario +
+  sábado).
+- `{"accion": "semanal"}`: fuerza solo las rotaciones `weekly` de BD y Users.
+- `{"accion": "completa"}`: fuerza `daily` + `weekly` de BD y `weekly` de Users.
+
+Útil para probar o recuperar una rotación fallida (p. ej. el sábado cuando la
+semanal no corrió). Se invoca desde la consola Lambda → Test con el JSON de
+arriba, o con `aws lambda invoke`.
+
 ## Notas de seguridad
 
 - El rol puede crear snapshots de cualquier volumen de la cuenta (necesario

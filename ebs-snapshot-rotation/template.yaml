@@ -79,7 +79,9 @@ Resources:
               - Sid: BorrarSoloSnapshotsCreadosPorEstaLambda
                 Effect: Allow
                 Action: ec2:DeleteSnapshot
-                Resource: !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:snapshot/*"
+                # Mismo quirk que CreateSnapshot/CreateTags: el ARN de snapshot
+                # para IAM no lleva Account ID (arn:aws:ec2:region::snapshot/*).
+                Resource: !Sub "arn:aws:ec2:${AWS::Region}::snapshot/*"
                 Condition:
                   StringEquals:
                     aws:ResourceTag/ManagedBy: snapshot-rotation-lambda
@@ -91,7 +93,7 @@ Resources:
       Runtime: python3.12
       Handler: lambda_function.handler
       Role: !GetAtt SnapshotRotationRole.Arn
-      Timeout: 30
+      Timeout: 300
       Code:
         S3Bucket: !Ref CodeS3Bucket
         S3Key: !Ref CodeS3Key

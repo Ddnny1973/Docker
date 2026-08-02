@@ -16,9 +16,15 @@ Configuración vía variables de entorno de la Lambda:
 - BD_INSTANCE_ID       (obligatorio)  -> ej. i-0e04b97a8d5031545
 - USERS_INSTANCE_ID    (opcional)     -> ej. i-04d6abcd755fe89b5
 - REGION               (default us-east-2)
+
+Invocación manual con payload (opcional, compatible con el cron):
+- Sin "accion" / evento del cron  -> comportamiento por defecto (diario + sábado)
+- {"accion": "semanal"}           -> fuerza solo las rotaciones weekly (BD + Users), cualquier día
+- {"accion": "completa"}          -> fuerza daily + weekly de BD y weekly de Users, cualquier día
 """
 
 import os
+import time
 import logging
 from datetime import datetime, timezone
 
@@ -74,24 +80,35 @@ def _snapshots_previos(ec2, volume_id: str, rotation_type: str):
 def _crear_snapshot(ec2, volume_id: str, rotation_type: str, role: str):
     hoy_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     descripcion = f"{role}-{rotation_type} rotation {hoy_str}"
-    resp = ec2.create_snapshot(
-        VolumeId=volume_id,
-        Description=descripcion,
-        TagSpecifications=[
-            {
-                "ResourceType": "snapshot",
-                "Tags": [
-                    {"Key": "Name", "Value": f"{role}-{rotation_type}"},
-                    {"Key": "ManagedBy", "Value": MANAGED_BY_TAG},
-                    {"Key": "RotationType", "Value": rotation_type},
-                    {"Key": "VolumeRole", "Value": role},
-                    {"Key": "CreatedDate", "Value": hoy_str},
-                ],
-            }
-        ],
-    )
-    logger.info("Snapshot creado: %s (%s / %s)", resp["SnapshotId"], role, rotation_type)
-    return resp["SnapshotId"]
+    tags = [
+        {"Key": "Name", "Value": f"{role}-{rotation_type}"},
+        {"Key": "ManagedBy", "Value": MANAGED_BY_TAG},
+        {"Key": "RotationType", "Value": rotation_type},
+        {"Key": "VolumeRole", "Value": role},
+        {"Key": "CreatedDate", "Value": hoy_str},
+    ]
+    # AWS limita la tasa de CreateSnapshot por volumen; si se excede, se
+    # reintenta con espera creciente en vez de abortar toda la rotación.
+    for intento in range(4):
+        try:
+            resp = ec2.create_snapshot(
+                VolumeId=volume_id,
+                Description=descripcion,
+                TagSpecifications=[{"ResourceType": "snapshot", "Tags": tags}],
+            )
+            logger.info("Snapshot creado: %s (%s / %s)", resp["SnapshotId"], role, rotation_type)
+            return resp["SnapshotId"]
+        except ec2.exceptions.ClientError as exc:
+            codigo = exc.response["Error"]["Code"]
+            if codigo == "SnapshotCreationPerVolumeRateExceeded" and intento < 3:
+                espera = 20 * (2 ** intento)  # 20s, 40s, 80s
+                logger.warning(
+                    "Rate limit por volumen, reintento en %ss (volumen %s, %s / %s)",
+                    espera, volume_id, role, rotation_type,
+                )
+                time.sleep(espera)
+                continue
+            raise
 
 
 def _rotar(ec2, volume_id: str, rotation_type: str, role: str):
@@ -128,20 +145,40 @@ def handler(event, context):
     es_sabado = weekday == 5
     es_domingo = weekday == 6
 
-    if es_domingo:
+    # Payload opcional para forzar rotaciones manualmente (ver docstring).
+    accion = (event or {}).get("accion")
+    forzar_semanal = accion == "semanal"
+    forzar_completa = accion == "completa"
+
+    if es_domingo and not forzar_semanal and not forzar_completa:
         logger.info("Hoy es Domingo, no se toma ningún snapshot.")
         return {"status": "skipped", "reason": "sunday"}
 
     ec2 = _ec2()
     resultado = {}
 
-    # Instancia BD: snapshot diario Lun-Sáb (rotación "daily")
-    resultado["bd_daily"] = _rotar_instancia(ec2, BD_INSTANCE_ID, "daily", "bd")
+    # Instancia BD: snapshot diario Lun-Sáb (rotación "daily").
+    # Se omite solo cuando se fuerza la rotación "semanal".
+    if not forzar_semanal:
+        try:
+            resultado["bd_daily"] = _rotar_instancia(ec2, BD_INSTANCE_ID, "daily", "bd")
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Falló la rotación bd_daily: %s", exc)
+            resultado["bd_daily"] = []
 
-    # Instancia BD: además, snapshot semanal solo los Sábados (rotación "weekly")
-    if es_sabado:
-        resultado["bd_weekly"] = _rotar_instancia(ec2, BD_INSTANCE_ID, "weekly", "bd")
-        # Instancia Users: solo se snapshotea los Sábados
-        resultado["users_weekly"] = _rotar_instancia(ec2, USERS_INSTANCE_ID, "weekly", "users")
+    # Rotaciones semanales: los Sábados por defecto, o cualquier día si se
+    # fuerza con payload. Cada rotación va aislada para que un fallo de BD no
+    # impida la instantánea de Users.
+    if es_sabado or forzar_semanal or forzar_completa:
+        try:
+            resultado["bd_weekly"] = _rotar_instancia(ec2, BD_INSTANCE_ID, "weekly", "bd")
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Falló la rotación bd_weekly: %s", exc)
+            resultado["bd_weekly"] = []
+        try:
+            resultado["users_weekly"] = _rotar_instancia(ec2, USERS_INSTANCE_ID, "weekly", "users")
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Falló la rotación users_weekly: %s", exc)
+            resultado["users_weekly"] = []
 
-    return {"status": "ok", "weekday": weekday, "snapshots": resultado}
+    return {"status": "ok", "weekday": weekday, "accion": accion, "snapshots": resultado}

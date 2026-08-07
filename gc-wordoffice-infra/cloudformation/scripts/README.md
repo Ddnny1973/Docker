@@ -1,125 +1,121 @@
-# Reset RDS Grace Period - Windows Server 2025
+# Reset automático del período de gracia RDS - Windows Server
 
 ## Descripción
 
-Script PowerShell que reseta el período de gracia de Remote Desktop Services (RDS) en Windows Server 2025.
+Mantiene viva la licencia temporal de Remote Desktop Services (RDS) borrando la
+"time bomb" del registro (`L$RTMTIMEBOMB`), lo que reinicia el período de gracia
+a **120 días**. No hay tope de resets: el proceso se puede repetir
+indefinidamente. **Cada reset devuelve exactamente 120 días** (el período no es
+configurable; los "180 días" que se ven en algunos clientes son la licencia
+temporal del equipo cliente, no del servidor).
 
-**Nota:** El período de gracia tiene un máximo de 3 resets. Cada reset otorga 120 días adicionales.
+> ⚠️ Microsoft no soporta esto en producción (la gracia es para testing).
+> La solución definitiva es comprar RDS CALs. Esto solo gana tiempo.
 
 ## Requisitos
 
-- Windows Server 2025
+- Windows Server (probado en 2025)
 - Acceso como Administrador
-- PowerShell 5.0 o superior
+- PowerShell 5.1 o superior
 
-## ¿Cuándo usar?
+## ¿Cómo funciona?
 
-Cuando recibas la alerta:
-Remote Desktop Services will stop working in X days
+La clave `HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\RCM\GracePeriod`
+está protegida incluso contra Administrators: **solo SYSTEM puede borrarla**.
+Por eso el script se ejecuta como SYSTEM (vía tarea programada) y no usa
+`takeown`/`icacls` (esas herramientas solo operan sobre archivos y carpetas, no
+sobre claves de registro).
 
-Y no tengas licencias RDS CALs instaladas.
+## Instalación (una sola vez)
 
-## Instalación
+1. Copia los dos scripts al servidor (p. ej. a `C:\Scripts\`):
+   - `reset-rds-grace-period.ps1`
+   - `install-rds-grace-reset-task.ps1`
+2. En PowerShell **como Administrador**:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File C:\Scripts\install-rds-grace-reset-task.ps1
+   ```
 
-1. Copia el script `reset-rds-grace-period.ps1` al servidor
-2. Abre PowerShell como Administrador
-3. Navega a la carpeta donde está el script
+Esto crea la tarea programada `Reset-RDS-GracePeriod` (SYSTEM) con dos disparadores:
+- **Diaria a las 18:59** (hora local Colombia): 5 min antes del apagado
+  automático de las 00:00 UTC / 19:00 COT, cuando ya no hay usuarios; el
+  contador se completa con el arranque de la mañana siguiente.
+- **Al arranque** del sistema: red de seguridad por si la cita diaria no corrió.
 
-## Uso
-
-### Opción 1: Ejecutar directamente
+La tarea solo actúa cuando quedan **≤ 30 días** de gracia (configurable con
+`-Threshold`). Para cambiar la hora de la cita diaria, re-ejecuta el instalador:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File reset-rds-grace-period.ps1
+powershell -ExecutionPolicy Bypass -File install-rds-grace-reset-task.ps1 -Hour 18 -Minute 50
 ```
 
-### Opción 2: Desde PowerShell Admin
+## Uso manual
 
 ```powershell
-Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
-.\reset-rds-grace-period.ps1
+# Ver días restantes de gracia (no modifica nada)
+powershell -ExecutionPolicy Bypass -File reset-rds-grace-period.ps1 -Check
+
+# Reset inmediato (aunque queden > 30 días)
+powershell -ExecutionPolicy Bypass -File reset-rds-grace-period.ps1 -Force
+
+# Ejecutar la tarea instalada
+schtasks /Run /TN Reset-RDS-GracePeriod
+
+# Verificar la tarea
+schtasks /Query /TN Reset-RDS-GracePeriod /V /FO LIST
 ```
 
-## ¿Qué hace el script?
+Si el script se lanza como usuario admin normal, se **auto-relanza como SYSTEM**
+vía una tarea temporal (`gcw_rds_grace_temp`) y hace el trabajo igualmente.
 
-1. **Verifica permisos Admin** - Asegura que se ejecute como administrador
-2. **Consulta clave GracePeriod** - Valida que existe en el registro
-3. **Toma ownership** - Toma propiedad de la clave del registro
-4. **Otorga permisos** - Da permisos de lectura/escritura
-5. **Elimina clave** - Elimina `GracePeriod` del registro
-6. **Reinicia servicio** - Reinicia TermService
-7. **Reinicia servidor** - Reinicia el servidor para aplicar cambios
+## ¿Qué hace el reset?
 
-## Resultado
+1. Verifica los días restantes (`Win32_TerminalServiceSetting.GetGracePeriodDays`).
+2. Si quedan más de 30 días (y sin `-Force`), no hace nada.
+3. Borra la clave `GracePeriod` (corriendo como SYSTEM).
+4. Reinicia el servicio `TermService` para regenerar el contador de 120 días.
+5. Verifica el resultado y loguea; si el contador no se renovó, avisa que se
+   complete con un reinicio (el arranque de cada mañana lo hace solo).
 
-✅ Período de gracia reseteado a 120 días
-✅ RDS funcionará sin restricciones por otros 120 días
-✅ Puedes hacer este proceso hasta 3 veces máximo
+Todo queda registrado en `<carpeta del script>\log\rds-grace-period.log`
+(p. ej. `C:\Scripts\log\rds-grace-period.log`; se crea sola).
 
-## Ubicación de la clave en registro
-HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\RCM\GracePeriod
-
-## Validar resultado
-
-Después de ejecutar:
-
-1. Abre **RD Licensing Diagnoser**
-2. Verifica que muestre ~120 días disponibles
-3. Intenta conectar via RDP
-
-## Limitaciones
-
-⚠️ **Solo 3 resets permitidos** - Microsoft limita esto a 3 resets máximo
-⚠️ **No es indefinido** - Después de 3 resets (360 días), necesitas licencias reales
-⚠️ **Solo para testing** - No usar en producción sin licencias CALs
-
-## Alternativas
-
-Si necesitas RDS indefinidamente en producción:
-- Instalar licencias RDS CALs
-- Usar Windows Server sin RDS (máximo 2 sesiones)
-- Contratar servicios cloud con RDS incluido
-
-## Troubleshooting
-
-### Error: "Access denied"
-```powershell
-# Ejecutar como Administrador nuevamente
-# O manualmente:
-takeown /F "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\RCM\GracePeriod" /A
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\RCM\GracePeriod" /f
-Restart-Computer
-```
-
-### Script no ejecuta
-```powershell
-# Permitir ejecución de scripts
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-### RDS sigue sin funcionar después del reset
-1. Reinicia manualmente el servidor
-2. Abre RD Licensing Diagnoser nuevamente
-3. Valida que el período se haya reseteado
-
-## Información técnica
+## Datos técnicos
 
 | Parámetro | Valor |
 |-----------|-------|
-| Período inicial | 120 días |
-| Máximo de resets | 3 |
-| Días totales posibles | 480 días (4 × 120) |
-| Archivo de clave | Registry: GracePeriod |
+| Período por reset | 120 días |
+| Tope de resets | Sin tope (automatizable indefinidamente) |
+| Clave de registro | `HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\RCM\GracePeriod` |
+| Valor "time bomb" | `L$RTMTIMEBOMB_*` |
 | Servicio asociado | TermService |
+| Log | `<carpeta del script>\log\rds-grace-period.log` |
+
+## Troubleshooting
+
+### "Access denied" al borrar la clave
+El script corre como SYSTEM; si se lanza como admin normal fallará. Usa la
+tarea programada (`schtasks /Run /TN Reset-RDS-GracePeriod`) o el
+auto-relanzamiento del propio script.
+
+### El contador no se renueva tras el reset
+A veces `TermService` debe reiniciarse con el sistema para regenerar la clave.
+Como el servidor se apaga de noche, el arranque siguiente lo completa; si no,
+reinicia el servidor manualmente.
+
+### Script no ejecuta por ExecutionPolicy
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
+```
 
 ## Referencias
 
 - [Microsoft - RDS Licensing Troubleshooting](https://learn.microsoft.com/en-us/troubleshoot/windows-server/remote/troubleshoot-rds-licensing-guidance)
-- [Windows Server 2025 Remote Desktop Services](https://learn.microsoft.com/en-us/windows-server/remote/remote-desktop-services/)
+- [Windows Server Remote Desktop Services](https://learn.microsoft.com/en-us/windows-server/remote/remote-desktop-services/)
 
 ---
 
-**Autor:** Grupo Contable  
-**Versión:** 1.0  
-**Última actualización:** Abril 2026  
+**Autor:** Grupo Contable
+**Versión:** 2.0
+**Última actualización:** Agosto 2026
 **Servidor:** gcusers-v2 (Windows Server 2025)

@@ -6,7 +6,7 @@ repo: DOCKER
 tags: [aws, lambda, sam, cloudformation, snapshots, windows]
 related:
   - "[[_index]]"
-updated: 2026-08-02
+updated: 2026-08-07
 owner: dueño del repo
 ---
 
@@ -47,7 +47,13 @@ Gotchas (conocimiento duro, ver commits recientes):
 - Plantillas CloudFormation para las instancias Windows (`gcbdatos-ec2.yaml`,
   `parameters.yaml`) + scripts PowerShell de operación
   (`cloudformation/scripts/deploy.ps1`, `validate.ps1`,
-  `reset-rds-grace-period.ps1` — resetea el período de gracia de RDS, máx. 3 usos).
+  `reset-rds-grace-period.ps1` + `install-rds-grace-reset-task.ps1` — el par de
+  scripts mantiene viva la gracia RDS de 120 días de forma automática: la tarea
+  `Reset-RDS-GracePeriod` (SYSTEM) borra la clave `GracePeriod` a las 18:59 COT
+  (antes del apagado de las 00:00 UTC) y al arranque cuando quedan ≤30 días; no
+  hay tope de resets; el borrado requiere
+  SYSTEM porque la clave bloquea a Administrators, `takeown`/`icacls` no sirven
+  para registro).
 - Docs de arquitectura y planes de migración en `gc-wordoffice-infra/docs/`.
 - Este repo no contiene credenciales AWS; los stacks se actualizan con credenciales
   temporales (los scripts lo documentan).

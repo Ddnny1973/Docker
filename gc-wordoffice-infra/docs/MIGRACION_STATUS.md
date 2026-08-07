@@ -31,8 +31,8 @@
 - ✅ Zona horaria Colombia configurada
 - ✅ Idioma español (Colombia) en configuración (aplicado a nuevos usuarios)
 - ✅ RDS habilitado (fDenyTSConnections = 0)
-- ✅ RDS período de gracia: 119 días (Mode 5 Per Device)
-- ✅ Script reset-rds-grace-period.ps1 creado (permite 3 resets = 480 días totales)
+- ✅ RDS período de gracia: 120 días (Mode 5 Per Device)
+- ✅ Reset automático de gracia instalado: `reset-rds-grace-period.ps1` (borrado correcto como SYSTEM, sin tope de resets) + tarea `Reset-RDS-GracePeriod` (diaria 18:59 COT antes del apagado y al arranque; resetea cuando quedan ≤ 30 días) → gracia indefinida
 - ✅ Usuario test-rds creado y probado
 
 ### Documentación
@@ -181,7 +181,7 @@ mstsc /v:172.31.x.x /admin
 |------|-----------|---------|
 | Backups BD | gcbdatos actual | SÍ |
 | Usuarios RDS | gcusers actual | SÍ |
-| Licencia RDS | gcusers-v2 (119 días) | ALTO |
+| Licencia RDS | gcusers-v2 (reset automático, 120 días por reset) | MEDIO |
 | SQL Server instancia | gcbdatos-v2 | SÍ |
 | Wordoffice app | Ambos servidores | SÍ |
 | Configuración regional | Ambos servidores | NO |
@@ -215,7 +215,8 @@ mstsc /v:172.31.x.x /admin
 - `/docs/gcusers-migracion-plan.md` - Plan usuario RDS
 - `cloudformation/templates/gcbdatos-ec2.yaml` - Template BD
 - `cloudformation/templates/gcusers-ec2.yaml` - Template usuarios (por crear)
-- `reset-rds-grace-period.ps1` - Script reset licencia RDS
+- `cloudformation/scripts/reset-rds-grace-period.ps1` - Script reset licencia RDS (corre como SYSTEM)
+- `cloudformation/scripts/install-rds-grace-reset-task.ps1` - Instala la tarea programada que automatiza el reset
 
 ---
 

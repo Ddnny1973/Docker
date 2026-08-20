@@ -1,4 +1,4 @@
-console.log("Versión index.js: 2026-03-05.01");
+console.log("Versión index.js: 2026-03-05.03");
 import dotenv from 'dotenv';
 dotenv.config();
 import express from 'express';
@@ -10,6 +10,26 @@ import path from 'path';
 const { Client, LocalAuth } = pkg;
 const app = express();
 app.use(express.json());
+
+// Limpiar SingletonLock de Chromium al iniciar (evita "profile in use")
+const cleanSingletonLocks = () => {
+    const authDir = '/app/.wwebjs_auth';
+    try {
+        if (fs.existsSync(authDir)) {
+            const sessions = fs.readdirSync(authDir);
+            for (const session of sessions) {
+                const lockFile = path.join(authDir, session, 'SingletonLock');
+                if (fs.existsSync(lockFile)) {
+                    fs.unlinkSync(lockFile);
+                    console.log(`🔓 SingletonLock eliminado: ${lockFile}`);
+                }
+            }
+        }
+    } catch (error) {
+        console.warn(`⚠️ Error limpiando SingletonLocks: ${error.message}`);
+    }
+};
+cleanSingletonLocks();
 
 // Manejo de promesas rechazadas
 process.on('unhandledRejection', (reason, promise) => {
@@ -118,10 +138,10 @@ const startClient = async () => {
             console.log(`🔐 Cliente autenticado (${SESSION_ID})`);
             setTimeout(() => {
                 if (!clientReady) {
-                    console.log(`✅ Activando modo sin ready event`);
+                    console.log(`⚠️ ready event no llegó en 30s, activando de todas formas`);
                     clientReady = true;
                 }
-            }, 5000);
+            }, 30000);
         });
         
         client.on('loading_screen', (percent, message) => {
@@ -136,15 +156,10 @@ const startClient = async () => {
         client.on('disconnected', (reason) => {
             console.warn(`⚠️ Cliente desconectado (${SESSION_ID}): ${reason}`);
             clientReady = false;
-            
-            if (reason !== 'LOGOUT') {
-                console.log(`🔄 Reiniciando cliente en 5 segundos...`);
-                client.destroy();
+            console.log(`🔄 Reiniciando cliente en 5 segundos...`);
+            client.destroy().catch(() => {}).finally(() => {
                 setTimeout(() => startClient(), 5000);
-            } else {
-                console.log(`🛑 Sesión cerrada por LOGOUT`);
-                client.destroy();
-            }
+            });
         });
 
         if (ENABLE_RECEIVE_MESSAGES) {
@@ -283,17 +298,14 @@ const startClient = async () => {
         }
 
         try {
-            const initPromise = client.initialize();
-            const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Auth timeout')), 60000)
-            );
-            
-            await Promise.race([initPromise, timeoutPromise]);
+            // Un solo initialize sin timeout extra — protocolTimeout (120s) ya maneja los cortes
+            await client.initialize();
             console.log(`🔄 Cliente inicializado (${SESSION_ID})`);
         } catch (initError) {
             console.error(`⚠️ Error en initialize:`, initError.message);
-            client.initialize().catch(err => {
-                console.error(`❌ Error adicional:`, err.message);
+            // No llamar initialize() de nuevo aquí: causaría double-init y múltiples ready events
+            client.destroy().catch(() => {}).finally(() => {
+                setTimeout(() => startClient(), 5000);
             });
         }
     } catch (error) {

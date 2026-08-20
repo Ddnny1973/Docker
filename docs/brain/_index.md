@@ -3,14 +3,14 @@ title: "Hub — Cerebro digital de DOCKER (infraestructura de contenedores)"
 type: hub
 app: infra-contenedores
 repo: DOCKER
-tags: [hub, docker, odoo, n8n, hetzner, nginx, aws]
+tags: [hub, docker, odoo, n8n, nginx, aws, prospectum, arquitectura]
 related:
   - "[[arquitectura-contenedores]]"
   - "[[deploy-y-sync]]"
   - "[[backups-retencion]]"
   - "[[aws-subproyectos]]"
   - "[[credenciales-convenciones]]"
-updated: 2026-08-02
+updated: 2026-08-20
 owner: dueño del repo
 ---
 
@@ -19,11 +19,12 @@ owner: dueño del repo
 ## Qué es este repo
 
 Repo de **configuración de infraestructura** (no un codebase): `docker-compose.yml`,
-`Dockerfile` y vhosts nginx para las aplicaciones desplegadas en un único servidor
-Hetzner (`docker-alma-32gb-hel1-1`, AlmaLinux 9, `37.27.218.117`). Sin tests, sin
-lint, sin build tooling y **sin deploy automatizado**: este checkout es la fuente
-de verdad y los cambios llegan al servidor copiando/pusheando archivos a
-`/data/odoo/`.
+`Dockerfile` y vhosts nginx para las aplicaciones desplegadas en 4 servidores
+Linux (Bastion + 4 Docker nodes). Sin tests, sin lint, sin build tooling y
+**sin deploy automatizado**: este checkout es la fuente de verdad y los cambios
+llegan a los servidores copiando/pusheando archivos a `/data/odoo/`.
+
+Ver `INFRAESTRUCTURA.md` para IPs, distribución de proyectos y credenciales.
 
 Rutas del servidor (hardcodeadas en scripts, no "arreglarlas"):
 - Proyectos: `/data/odoo/<NN>/`
@@ -32,6 +33,7 @@ Rutas del servidor (hardcodeadas en scripts, no "arreglarlas"):
 
 ## Mapa de contenido
 
+- [Arquitectura de servidores](arquitectura-servidores.md) — diagrama de la infraestructura: Bastion (nginx) + 4 nodos Docker, flujo de peticiones, convención de puertos.
 - [[arquitectura-contenedores]] — layout de proyectos numerados, convención de
   puertos `80NN`/`90NN`, patrón Odoo `web` + `db-<NN>`, stack n8n de `32`,
   proyectos inactivos/cancelados.
@@ -45,6 +47,14 @@ Rutas del servidor (hardcodeadas en scripts, no "arreglarlas"):
   propio flujo de deploy, ajeno a los contenedores del servidor.
 - [[credenciales-convenciones]] — norma del repo de credenciales en texto plano,
   dónde están las contraseñas/API keys y qué docs maestros existen.
+
+## Documentación por proyecto
+
+- **41 (Prospectum):**
+  - [Arquitectura del proyecto](../../41/ARQUITECTURA.md) — diagrama, puertos, rutas y comandos.
+  - [Instrucciones de conexión](../../41/INSTRUCCIONES_CONEXION.md) — cómo conectarse al servidor y configurar el versionamiento del código.
+- **Docker Alma 16GB (nuevo):**
+  - [Instrucciones de conexión](../../INSTRUCCIONES_CONEXION_ALMA.md) — cómo conectarse al servidor `2.29.11.73` y configurar la clave SSH.
 
 ## Puntos de entrada existentes (no duplicar, solo enlazar)
 

@@ -7,7 +7,7 @@ tags: [docker, docker-compose, odoo, n8n, puertos]
 related:
   - "[[_index]]"
   - "[[deploy-y-sync]]"
-updated: 2026-08-02
+updated: 2026-08-20
 owner: dueño del repo
 ---
 
@@ -60,5 +60,44 @@ Inventario por proyecto (ver `INFRAESTRUCTURA.md` para estado actualizado):
 - `transcription` (Whisper) lee `OPENAI_API_KEY` **del entorno del shell**, no de
   un `.env` del proyecto: si se levanta sin la variable, el servicio falla.
 - Los contenedores `wppapi*` se construyen desde `32/whatsapp-web-api/`
-  (Node + whatsapp-web.js + Puppeteer); cada uno tiene su sesión y carpeta de
+  (Node + whatsapp-web.js v1.34.7 + Puppeteer); cada uno tiene su sesión y carpeta de
   media propia (`wppapi-*-media`).
+- `wppapi_ai` y `wppapi_ai_2` están **deshabilitados** (comentados en compose).
+
+### Resource limits (agos 2026)
+
+Todos los servicios activos tienen `deploy.resources.limits`:
+
+| Servicio | CPU limit | RAM limit | CPU reservation | RAM reservation |
+|----------|-----------|-----------|-----------------|-----------------|
+| n8n | 3.0 | 4000M | 1.0 | 1000M |
+| ocr | 3.0 | 4000M | 0.5 | 2000M |
+| pdf2img | 2.0 | 2000M | 0.5 | 500M |
+| wppapi | 1.5 | 1500M | 1.0 | 500M |
+| wppapi_mb | 1.5 | 1200M | 1.0 | 400M |
+
+Total reservations: 4.0 CPU (server tiene 4 cores). Servicios `wppapi*` y `n8n`
+tienen healthchecks configurados.
+
+### Fixes aplicados a whatsapp-web-api (index.js v0.05)
+
+- **SingletonLock cleanup**: al iniciar, borra automáticamente archivos
+  `SingletonLock` de Chromium para evitar "profile in use" tras crashes.
+- **Cola serializada de envíos**: `enqueueSend()` procesa envíos uno a la vez
+  para no saturar Puppeteer/Chromium con requests concurrentes.
+- **protocolTimeout 300s**: subido de 120s para evitar timeouts en envíos largos.
+- **Endpoint `/restart`**: reinicia el cliente WhatsApp sin borrar sesión ni
+  contenedor. Útil cuando el Store no carga.
+- **Endpoint `/status`**: muestra estado, cola de envíos y si está enviando.
+- **whatsapp-web.js 1.34.7**: actualizado de 1.34.6 para fix de Store loading.
+
+### Monitoreo de CPU
+
+Scripts en `32/script/` (commit `acfee39`):
+- `monitor_cpu.sh` — cron cada 5 min, logs en `/data/odoo/32/logs/`
+- `install_monitor_cron.sh` — instala el cron
+- `analizar_cpu.sh` — analiza logs históricos
+
+El principal culpable de CPU era `wppapi_mb` con memory leak en Puppeteer/Chromium
+(crecimiento lineal de 520MB a 1.6GB+ antes de crash). Los resource limits
+previenen que consuma todo el host.

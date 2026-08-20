@@ -37,9 +37,10 @@ Rutas del servidor (hardcodeadas en scripts, no "arreglarlas"):
 - [[arquitectura-contenedores]] — layout de proyectos numerados, convención de
   puertos `80NN`/`90NN`, patrón Odoo `web` + `db-<NN>`, stack n8n de `32`,
   proyectos inactivos/cancelados.
-- [[deploy-y-sync]] — cómo llegan los cambios al servidor (sin CI/CD), flujo git
-  hacia `trunk`, vhosts nginx (`sites-available/` vs `nginex/`), despliegue por
-  proyecto y init de Odoo 18 sin demo.
+- [[deploy-y-sync]] — cómo llegan los cambios al servidor: GitHub Actions sincroniza
+  `docker-compose.yml` y `config/` de proyectos 35, 36, 37 vía SCP a
+  `2.29.11.73:/data/odoo/`. Vhosts nginx en `sites-available/` se despliegan
+  manualmente al Bastion. Init de Odoo 18 sin demo incluido.
 - [[backups-retencion]] — `backup_contenedor.sh`/`backup_todos.sh`,
   `prune_backups.py` y el gotcha crítico de `DRY_RUN = False`.
 - [[aws-subproyectos]] — `ebs-snapshot-rotation/` (Lambda + SAM) y

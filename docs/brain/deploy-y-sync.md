@@ -3,22 +3,39 @@ title: "Deploy y sincronización"
 type: process
 app: infra-contenedores
 repo: DOCKER
-tags: [git, deploy, nginx, hentzer, trunk]
+tags: [git, deploy, nginx, hetzner, trunk, github-actions]
 related:
   - "[[_index]]"
   - "[[arquitectura-contenedores]]"
-updated: 2026-08-02
+updated: 2026-08-20
 owner: dueño del repo
 ---
 
 # Deploy y sincronización
 
-## Sin CI/CD ni deploy automatizado
+## GitHub Actions: sync de archivos de despliegue
 
-Este repo **no tiene pipeline** (no hay `.github/workflows` ni scripts de deploy).
-Es la fuente de verdad: los cambios se versionan y luego **se copian/pegan
-manualmente** en el servidor dentro de `/data/odoo/`. Asumir que un cambio
-commiteado NO está desplegado hasta que alguien lo sube al servidor.
+Para el servidor **Docker Alma 16GB** (`2.29.11.73`), el repo usa GitHub Actions
+para sincronizar automáticamente archivos de despliegue:
+
+- **Workflow:** `.github/workflows/sync-deploy.yml`
+- **Trigger:** push a `trunk` que modifique `35/`, `36/` o `37/`
+- **Qué sync:** `docker-compose.yml` y `config/` de cada proyecto
+- **Qué NO sync:** `postgresql/`, `filestore/`, `extra-addons/`, `.env`, backups
+- **Método:** SCP con SSH key dedicada (`ci-deploy@github-actions`)
+- **Servidor destino:** `/data/odoo/<NN>/`
+
+El workflow solo copia archivos. **No reinicia servicios** — el usuario decide
+cuándo hacer `docker compose up -d` manualmente.
+
+### Workflow manual
+
+También se puede ejecutar manualmente desde GitHub Actions → "Sync Deploy Files" → "Run workflow".
+
+## Otros servidores (sin CI/CD)
+
+Los demás servidores (Docker-New-01/02/03) **no tienen Actions**. Los cambios
+siguen el flujo manual: copiar/pushear a `/data/odoo/` en el servidor.
 
 ## Flujo git
 
@@ -32,13 +49,11 @@ commiteado NO está desplegado hasta que alguien lo sube al servidor.
 ## Nginx: vhosts de proxy
 
 - `sites-available/` = vhosts que hacen proxy de dominios a los puertos del host
-  (y en varios casos a IPs internas `10.0.0.x`, p. ej. `analytics.*`→`10.0.0.2:8039`,
-  `trading.*`→`10.0.0.4:8043`). Los certificados los gestiona **Certbot**
-  (bloque `listen 443 ssl`, redirect 301 de `:80`).
-- `nginex/` es un directorio **sobrante con typo** que contiene un solo conf
-  (`trading.*`). Los vhosts nuevos van en `sites-available/`, nunca en `nginex/`.
-- Hay archivos de respaldo acumulados en `sites-available/` (`.bk`, `.bk2`,
-  `.save`) de vhosts en evolución — no borrarlos sin confirmar.
+  (y en varios casos a IPs internas `10.0.0.x`). Los certificados los gestiona
+  **Certbot** (bloque `listen 443 ssl`, redirect 301 de `:80`).
+- Los vhosts nuevos van en `sites-available/`, nunca en `nginex/`.
+- Los vhosts se despliegan **manualmente** al Bastion (copiar a `/etc/nginx/conf.d/`
+  y ejecutar `nginx -t && systemctl reload nginx`).
 
 ## Despliegue de un proyecto
 

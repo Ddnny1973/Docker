@@ -78,7 +78,7 @@ def transcribe_audio():
         logger.info(f"Transcribiendo audio en idioma: {language}")
         with open(temp_file, 'rb') as audio:
             transcript = client.audio.transcriptions.create(
-                model="whisper-1",
+                model="gpt-4o-mini-transcribe-2025-03-20",
                 file=audio,
                 language=language,
                 response_format="json"
@@ -128,40 +128,65 @@ def transcribe_from_url():
         data = request.json
         file_path = data.get('file_path')
         language = data.get('language', 'es')
-        
+
         if not file_path:
             return jsonify({"error": "file_path es requerido"}), 400
-        
-        if not os.path.exists(file_path):
-            return jsonify({"error": f"Archivo no encontrado: {file_path}"}), 404
-        
+
+        # Normalizar ruta y evitar path-injection
+        file_path = os.path.normpath(file_path)
+        allowed_dirs = [
+            '/app/wppapi-media/',
+            '/app/wppapi-ai-media/',
+            '/app/wppapi-ai-2-media/'
+        ]
+
+        # Si la ruta empieza con /app/media/, buscar en todas las variantes
+        candidate_paths = [file_path]
+        if file_path.startswith('/app/media/'):
+            candidate_paths = [
+                file_path.replace('/app/media/', '/app/wppapi-media/'),
+                file_path.replace('/app/media/', '/app/wppapi-ai-media/'),
+                file_path.replace('/app/media/', '/app/wppapi-ai-2-media/')
+            ]
+
+        # Buscar el archivo en las rutas posibles y validar que esté dentro de los directorios permitidos
+        real_path = None
+        for path in candidate_paths:
+            path = os.path.normpath(path)
+            if any(path.startswith(d) for d in allowed_dirs) and os.path.exists(path):
+                real_path = path
+                break
+
+        if not real_path:
+            return jsonify({"error": f"Archivo no encontrado en rutas permitidas: {candidate_paths}"}), 404
+
         # Convertir OGG a MP3 si es necesario
-        audio_path = file_path
-        if file_path.endswith('.ogg'):
+        audio_path = real_path
+        if real_path.endswith('.ogg'):
             logger.info("Convirtiendo OGG a MP3...")
-            audio_path = convert_ogg_to_mp3(file_path)
-        
+            audio_path = convert_ogg_to_mp3(real_path)
+
         # Transcribir
         logger.info(f"Transcribiendo audio desde: {audio_path}")
         with open(audio_path, 'rb') as audio:
             transcript = client.audio.transcriptions.create(
-                model="whisper-1",
+                model="gpt-4o-mini-transcribe-2025-03-20",
                 file=audio,
                 language=language,
                 response_format="json"
             )
-        
+
         # Limpiar MP3 temporal si se creó
-        if audio_path != file_path and os.path.exists(audio_path):
+        if audio_path != real_path and os.path.exists(audio_path):
             os.unlink(audio_path)
-        
+
         result = {
             "success": True,
             "text": transcript.text,
             "language": language,
-            "file_path": file_path
+            "file_path": real_path
         }
-        
+
         logger.info(f"Transcripción exitosa: {transcript.text[:100]}...")
         return jsonify(result), 200
         

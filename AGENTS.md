@@ -2,7 +2,7 @@
 
 ## What this repo is
 
-Docker Compose / Dockerfile configs for containerized apps deployed on a single Hetzner server (`docker-alma-32gb-hel1-1`, AlmaLinux 9, `37.27.218.117`). It is infrastructure config, not a codebase: no tests, no lint, no build tooling. There is no automated deploy — this checkout is a source of truth; changes reach the server by copying/pushing files into `/data/odoo/`.
+Docker Compose / Dockerfile configs for containerized apps deployed across 4 Linux servers (Bastion + 3 Docker nodes). It is infrastructure config, not a codebase: no tests, no lint, no build tooling. There is no automated deploy — this checkout is a source of truth; changes reach the servers by copying/pushing files into `/data/odoo/`. See `INFRAESTRUCTURA.md` for server IPs and project distribution.
 
 Server-side paths (hardcoded in scripts, do not "fix" them):
 - Projects live at `/data/odoo/<NN>/`
@@ -24,7 +24,7 @@ Docs and git commits are in **Spanish** — keep that convention. Push to `origi
 ## Layout
 
 - Numbered dirs (`16`, `29`–`42`) = independent compose projects, one per app instance. Run from inside the dir: `docker compose up -d`.
-  - Odoo instances: services `web` + `db-<NN>` (DB container names are unique so many instances coexist on one host). `config/odoo.conf` is mounted at `/etc/odoo`; custom Odoo modules live under the project's `extra-addons/` (e.g. `35/condominium`, `36/sicone`, `37/spt`, `38/gestor`, `41/prospectum`, `42/showcase`).
+  - Odoo instances: services `web` + `db-<NN>` (DB container names are unique so many instances coexist on one host). `config/odoo.conf` is mounted at `/etc/odoo`; custom Odoo modules live under the project's `extra-addons/` (e.g. `35/condominium`, `36/sicone`, `37/spt`, `38/gestor`, `41/prospectum`, `42/showcase`). Some projects include their own docs (e.g. `41/ARQUITECTURA.md`, `41/INSTRUCCIONES_CONEXION.md`).
   - `32` = n8n stack (n8n, redis, postgres:12, pgvector, ocr, whisper transcription, pdf2img, 4x `whatsapp-web-api`). The `transcription` service reads `OPENAI_API_KEY` from the shell env; the `wppapi*` containers build from `32/whatsapp-web-api`.
   - `34` code-server reads `VSCODE_PASSWORD` from `.env`; `39` Metabase; `40` OpenClaw gateway. `16` (Odoo 13) is CANCELLED, and `33`, `34`, `40` are inactive (see `INFRAESTRUCTURA.md`).
 - `sites-available/` = nginx vhosts that proxy domains to the host ports below. `nginex/` is a stray typo'd dir containing one conf — put new vhosts in `sites-available/`, not there.

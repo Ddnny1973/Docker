@@ -1,19 +1,32 @@
 # Estado de la Infraestructura de Contenedores
 
-Este documento detalla el estado, credenciales y plan de migración de la infraestructura de contenedores del proyecto al día de hoy (**28 de junio de 2026**). Su propósito es servir de contexto para futuras sesiones de desarrollo y administración.
+Este documento detalla el estado, credenciales y distribución de la infraestructura de contenedores al día de hoy (**20 de agosto de 2026**). Su propósito es servir de contexto para futuras sesiones de desarrollo y administración.
 
 ---
 
-## 1. Servidor Host (Producción)
+## 1. Servidores Activos
 
-* **Proveedor:** Hetzner Cloud
-* **Nombre del Servidor:** `docker-alma-32gb-hel1-1`
-* **IP Pública:** `37.27.218.117`
-* **Ubicación:** Helsinki (Región `hel1-1`)
-* **Capacidad de Recursos:**
-  * **CPU:** 4+ vCPUs
-  * **RAM:** 30.35 GiB (~32 GB)
-  * **Disco Principal (`/`):** 232.7 GB (~106 GB ocupados, ~126 GB libres)
+La infraestructura se distribuye en 5 servidores Linux (acceso `root`):
+
+| Servidor | IP Pública(s) | IP Local | Rol |
+| :--- | :--- | :--- | :--- |
+| **Bastion** | `95.217.165.80`, `65.109.240.180`, `5.75.214.38` | `10.0.0.3` | Nginx (proxy reverso a los nodos Docker) |
+| **Docker - New - 01** | `46.224.72.175` | `10.0.0.4` | Contenedores Docker |
+| **Docker - New - 02** | `77.42.26.60` | `10.0.0.5` | Contenedores Docker |
+| **Docker - New - 03** | `37.27.190.155` | `10.0.0.2` | Contenedores Docker |
+| **Docker - Alma - 16GB** | `2.29.11.73` | `10.0.0.6` | Contenedores Docker (AlmaLinux 9, 8vCPU/16GB/160GB) |
+
+> **Nota:** El servidor original (`37.27.218.117`, Hetzner Helsinki) ya no forma parte de la infraestructura.
+
+### Distribución de proyectos por servidor
+
+| Servidor | Rol | Proyectos conocidos |
+| :--- | :--- | :--- |
+| **Bastion** (`10.0.0.3`) | Nginx — proxy reverso de todos los dominios | Ningún contenedor; solo nginx con vhosts de `sites-available/` |
+| **Docker - New - 01** (`46.224.72.175` / `10.0.0.4`) | Contenedores | `35`, `39` (Metabase), `42` (Showcase), Trading (`43`), entre otros |
+| **Docker - New - 02** (`77.42.26.60` / `10.0.0.5`) | Contenedores | `41` (Prospectum) — confirmado por vhost |
+| **Docker - New - 03** (`37.27.190.155` / `10.0.0.2`) | Contenedores | `29`, `32` (n8n), `36` (Sicone), `37` (SPT), `38` (Gestor), entre otros |
+| **Docker - Alma - 16GB** (`2.29.11.73` / `10.0.0.6`) | Contenedores | *Por asignar* |
 
 ---
 
@@ -21,7 +34,7 @@ Este documento detalla el estado, credenciales y plan de migración de la infrae
 
 ### Servidor de Base de Datos Principal (Puerto 9032)
 * **Tipo:** PostgreSQL 12 (Servicio `db` en proyecto `32`)
-* **Acceso:** `37.27.218.117:9032`
+* **Acceso:** `37.27.218.117:9032` *(verificar si migró a nuevo servidor)*
 * **Usuario:** `n8n`
 * **Contraseña:** `Urantia73`
 * **Base de Datos Destacada:** `n8n`
@@ -32,7 +45,7 @@ Este documento detalla el estado, credenciales y plan de migración de la infrae
 
 ### Servidor de Base de Datos Vectorial / WhatsApp (Puerto 9033)
 * **Tipo:** PostgreSQL 14 + pgvector (Servicio `pgvectordb` en proyecto `32`)
-* **Acceso:** `37.27.218.117:9033`
+* **Acceso:** `37.27.218.117:9033` *(verificar si migró a nuevo servidor)*
 * **Usuario:** `vector`
 * **Contraseña:** `Urantia73`
 * **Bases de Datos Destacadas:**
@@ -50,49 +63,25 @@ Este documento detalla el estado, credenciales y plan de migración de la infrae
 ## 3. Estado de los Proyectos y Contenedores
 
 ### Proyectos Inactivos (No están corriendo en Docker)
+* **`16` (Odoo 13):** CANCELADO.
 * **`33` (Wetty):** Terminal en navegador (Puerto 8033).
 * **`34` (VSCode Web):** IDE online (Puerto 8034).
 * **`40` (Openclaw-gateway):** Gateway para openclaw (Puerto 8040).
 
-### Proyectos Activos y Perfil de Consumo (Junio 2026)
+### Proyectos Activos (Junio 2026)
 
-| Proyecto | Contenedores Activos | Consumo de RAM (RSS) | Consumo de CPU | Tránsito de Red | Descripción / Observaciones |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **APIs de WhatsApp** | `wppapi`, `wppapi_mb`, `wppapi_ai`, `wppapi_ai_2` | **~3.51 GiB** | ~4.20% | Bajo (~25 MB) | Pasarelas de comunicación de WhatsApp. |
-| **`32` (n8n + IA)** | `32-n8n-1`, `32-ocr-1`, `32-pdf2img-1`, `32-db-1`, `32-pgvectordb-1`, `32-redis-1`, `transcription` | **~2.72 GiB** | ~1.20% | Bajo | **Core de automatización e IA**. Destaca `32-ocr-1` con 1.36 GiB de RAM asignada. |
-| **`16` (Odoo 13)** | `16-web-1`, `16-db-16-1` | **~1.47 GiB** | ~0.20% | Bajo (~110 MB) | **PROYECTO CANCELADO**. Listo para apagar y liberar recursos. |
-| **`39` (Metabase)** | `39-metabase-1`, `39-db-39-1` | **~0.97 GiB** | **~6.71%** | **Extremadamente Alto (64 GB+)** | Alto uso de red y base de datos activa por consultas BI constantes. |
-| **`36` (Odoo)** | `36-web-1`, `36-db-36-1` | ~0.90 GiB | ~0.00% | Bajo | Instancia activa. |
-| **`35` (Odoo)** | `35-web-1`, `35-db-35-1` | ~0.86 GiB | ~0.00% | Bajo | Instancia activa. |
-| **`29` (Odoo)** | `29-web-1`, `29-db-29-1` | ~0.81 GiB | ~0.05% | Bajo | Instancia activa. |
-| **`30`/`30a` (Odoo)**| `30-web-1`, `30-db-30-1`, `30a-web-1`, `30a-db-30-1` | ~0.76 GiB | ~0.00% | Alto (~7 GB) | Tráfico medio de red en BD 30a. |
-| **`37` (Odoo)** | `37-web-1`, `37-db-37-1` | ~0.50 GiB | ~0.00% | Bajo | Instancia activa. |
-| **`38` (Odoo)** | `38-web-1`, `38-db-38-1` | ~0.49 GiB | ~0.03% | Bajo | Instancia activa. |
-| **`41` (Odoo)** | `41-web-1`, `41-db-41-1` | ~0.39 GiB | ~0.14% | Bajo | Instancia activa. |
-| **`42` (Odoo)** | `42-web-1`, `42-db-42-1` | ~0.39 GiB | ~0.07% | Bajo | Instancia activa. |
+| Proyecto | Descripción | Observaciones |
+| :--- | :--- | :--- |
+| **APIs de WhatsApp** | Pasarelas de comunicación de WhatsApp | `wppapi`, `wppapi_mb`, `wppapi_ai`, `wppapi_ai_2` |
+| **`32` (n8n + IA)** | Core de automatización e IA | Incluye n8n, OCR, pdf2img, pgvector, redis, transcription |
+| **`39` (Metabase)** | BI / consultas | Alto tránsito de red |
+| **`35`–`38`, `42` (Odoo)** | Instancias Odoo | Puertos `80NN`/`90NN` |
+| **`41` (Prospectum)** | Odoo 18 — `prospectum.ai-mindnovation.com` | Puerto `8041`/`9041`, longpoll `8079` |
 
 ---
 
-## 4. Diagnóstico de Rendimiento Histórico (Enero 2026)
+## 4. Pendientes conocidos
 
-Del último mes con registros en la base de datos de monitoreo (`whatsapp.monitoreo_recursos`), se extrajo el siguiente comportamiento:
-* **Uso promedio de CPU:** **3.50%** (Sistemas generalmente holgados).
-* **Picos de CPU:** **99.94%** (Saturaciones esporádicas en procesamiento intensivo).
-* **Uso promedio de RAM:** **30.44%** (~9.4 GB de 30.3 GB del host).
-* **Uso de disco principal (`/`):** **43% promedio** (~101 GB de 232 GB ocupados).
-
----
-
-## 5. Plan de Migración e Infraestructura Futura
-
-Dado que el proyecto **16** ha sido cancelado, ya no es necesario seguir costeando el servidor de 32 GB. Se planea una migración a una infraestructura más pequeña y económica.
-
-### Plan de Servidor Propuesto
-* **Modelo objetivo:** **CX33** de Hetzner (4 vCPUs, 8 GB RAM, 80 GB SSD).
-* **Almacenamiento Adicional:** Se requerirá agregar un **Hetzner Volume** adicional (de unos 100 GB - 150 GB) debido a que los datos actuales de los proyectos restantes suman ~100 GB, lo cual excede el disco de 80 GB del CX33 base.
-
-### Estado del Trámite de Compra
-* **Limitación del panel:** No es posible reescalar directamente el servidor actual porque el disco del CX33 (80 GB) es menor al disco actual (240 GB). Además, la cuenta posee un bloqueo/límite de recursos que impide crear el CX33 en paralelo de manera automática.
-* **Acción tomada:** Se redactó y envió un ticket a soporte solicitando:
-  1. Aumento del límite de recursos para poder crear una nueva instancia CX33.
-  2. O bien, ayuda técnica para degradar CPU y RAM del servidor actual manteniendo el tamaño del disco rígido actual intacto.
+- **Prospectum (41):** Configuración probada en `77.42.26.60` (Docker - New - 02). El vhost en el repo (`sites-available/prospectum.ai-mindnovation.com.conf`) apunta a `10.0.0.5:8041`, que es correcto. Falta verificar si ese vhost ya está desplegado en el Bastion (`65.109.240.180`).
+- **Distribución de proyectos:** Confirmar qué proyectos están en cada servidor Docker y actualizar la tabla de la sección 1.
+- **BDs del proyecto 32:** Verificar en qué servidor quedaron tras la migración.

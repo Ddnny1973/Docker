@@ -6,7 +6,7 @@ repo: DOCKER
 tags: [credenciales, seguridad, convenciones, docs]
 related:
   - "[[_index]]"
-updated: 2026-08-02
+updated: 2026-08-20
 owner: dueño del repo
 ---
 
@@ -24,6 +24,29 @@ sin pedirlo, pero tampoco duplicar secretos en documentos nuevos:
 - `34/.env` contiene `VSCODE_PASSWORD` en texto plano; `32` lee `OPENAI_API_KEY`
   del entorno del shell.
 - No commitear credenciales nuevas fuera de esa norma sin avisar.
+
+## Claves SSH
+
+Las claves SSH se generan directamente en el servidor y se documentan en el repo.
+**Nunca se commitean claves privadas.** El `.gitignore` raíz excluye `*.pem`,
+`*.key`, `*.pub` y `.env*`.
+
+### Convención de nombres
+
+| Clave | Servidor | Documentación |
+| :--- | :--- | :--- |
+| `ai-mindnovation` | Docker - New - 02 (`77.42.26.60`) | `41/INSTRUCCIONES_CONEXION.md` |
+| `id_storagebox` | (generada en cada servidor para Hetzner Storage Box) | `CX23_PLANTILLA_SETUP.md` |
+| `docker-alma-16gb` | Docker - Alma - 16GB (`2.29.11.73`) | `INSTRUCCIONES_CONEXION_ALMA.md` |
+
+### Formato de documentación
+
+Cada nueva conexión SSH documenta:
+1. Datos del servidor (IP pública, IP interna, usuario, specs).
+2. Generación de la clave (`ssh-keygen`).
+3. Copia de la clave pública al servidor.
+4. Prueba de conexión.
+5. Alias SSH (opcional).
 
 ## Documentos maestros
 

@@ -7,6 +7,7 @@ on:
       - '35/**'
       - '36/**'
       - '37/**'
+      - 'pgadmin4/**'
   workflow_dispatch:
 
 jobs:
@@ -45,6 +46,12 @@ jobs:
           scp -i ~/.ssh/ci-deploy -o StrictHostKeyChecking=no -r \
             37/config/ \
             root@2.29.11.73:/data/odoo/37/config/
+
+      - name: Sync pgadmin4
+        run: |
+          scp -i ~/.ssh/ci-deploy -o StrictHostKeyChecking=no \
+            pgadmin4/docker-compose.yml \
+            root@2.29.11.73:/data/odoo/pgadmin4/docker-compose.yml
 
       - name: Cleanup
         if: always()

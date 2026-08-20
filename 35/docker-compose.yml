@@ -8,12 +8,15 @@ services:
         condition: service_healthy
     ports:
      - "8035:8069"
+     - "8072:8072"
     environment:
      - HOST=db-35
      - PORT=5432
      - USER=odoo
      - PASSWORD=odoo
      - POSTGRES_DB=odoo
+     - ODOO_WORKERS=4
+     - ODOO_LONGPOLLING_PORT=8072
     volumes:
      - ./config:/etc/odoo
      - ./filestore:/var/lib/odoo/filestore

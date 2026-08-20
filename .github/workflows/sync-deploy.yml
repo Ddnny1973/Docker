@@ -22,16 +22,29 @@ jobs:
           chmod 600 ~/.ssh/ci-deploy
           ssh-keyscan -H 2.29.11.73 >> ~/.ssh/known_hosts
 
-      - name: Sync files to server
+      - name: Sync 35
         run: |
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/ci-deploy -o StrictHostKeyChecking=no" \
+          scp -i ~/.ssh/ci-deploy -o StrictHostKeyChecking=no \
             35/docker-compose.yml \
+            root@2.29.11.73:/data/odoo/35/docker-compose.yml
+          scp -i ~/.ssh/ci-deploy -o StrictHostKeyChecking=no -r \
             35/config/ \
+            root@2.29.11.73:/data/odoo/35/config/
+
+      - name: Sync 36
+        run: |
+          scp -i ~/.ssh/ci-deploy -o StrictHostKeyChecking=no \
             36/docker-compose.yml \
+            root@2.29.11.73:/data/odoo/36/docker-compose.yml
+
+      - name: Sync 37
+        run: |
+          scp -i ~/.ssh/ci-deploy -o StrictHostKeyChecking=no \
             37/docker-compose.yml \
+            root@2.29.11.73:/data/odoo/37/docker-compose.yml
+          scp -i ~/.ssh/ci-deploy -o StrictHostKeyChecking=no -r \
             37/config/ \
-            root@2.29.11.73:/data/odoo/
+            root@2.29.11.73:/data/odoo/37/config/
 
       - name: Cleanup
         if: always()

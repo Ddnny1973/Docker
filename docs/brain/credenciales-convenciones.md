@@ -64,5 +64,9 @@ Cada nueva conexión SSH documenta:
   de backup (`*.sh`), `prune_backups.py` y los `docker compose` corren en el
   servidor Linux. Un comando de backup desde la máquina local NO afecta al
   servidor real.
+- Cuando el usuario pida comandos para ejecutar en un servidor, entregarlos
+  **sin el prefijo `ssh docker-alma`** — el usuario los ejecuta directamente
+  en la consola del servidor. Solo usar `ssh docker-alma` cuando se pida
+  explícitamente o sea necesario ejecutar desde la PC local.
 - Repos hermanos en el mismo workspace: `../Trading` (usa la infra de n8n `32` y
   los vhosts de este repo; su backend vive en `/data/odoo/43`).

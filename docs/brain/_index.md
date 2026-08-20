@@ -3,7 +3,7 @@ title: "Hub — Cerebro digital de DOCKER (infraestructura de contenedores)"
 type: hub
 app: infra-contenedores
 repo: DOCKER
-tags: [hub, docker, odoo, n8n, nginx, aws, prospectum, arquitectura]
+tags: [hub, docker, odoo, n8n, nginx, aws, prospectum, arquitectura, trading]
 related:
   - "[[arquitectura-contenedores]]"
   - "[[deploy-y-sync]]"
@@ -19,7 +19,7 @@ owner: dueño del repo
 ## Qué es este repo
 
 Repo de **configuración de infraestructura** (no un codebase): `docker-compose.yml`,
-`Dockerfile` y vhosts nginx para las aplicaciones desplegadas en 4 servidores
+`Dockerfile` y vhosts nginx para las aplicaciones desplegadas en 5 servidores
 Linux (Bastion + 4 Docker nodes). Sin tests, sin lint, sin build tooling y
 **sin deploy automatizado**: este checkout es la fuente de verdad y los cambios
 llegan a los servidores copiando/pusheando archivos a `/data/odoo/`.
@@ -38,9 +38,9 @@ Rutas del servidor (hardcodeadas en scripts, no "arreglarlas"):
   puertos `80NN`/`90NN`, patrón Odoo `web` + `db-<NN>`, stack n8n de `32`,
   proyectos inactivos/cancelados.
 - [[deploy-y-sync]] — cómo llegan los cambios al servidor: GitHub Actions sincroniza
-  `docker-compose.yml` y `config/` de proyectos 35, 36, 37 vía SCP a
+  `docker-compose.yml` y `config/` de proyectos 35, 36, 37 y pgadmin4 vía SCP a
   `2.29.11.73:/data/odoo/`. Vhosts nginx en `sites-available/` se despliegan
-  manualmente al Bastion. Init de Odoo 18 sin demo incluido.
+  manualmente al Bastion.
 - [[backups-retencion]] — `backup_contenedor.sh`/`backup_todos.sh`,
   `prune_backups.py` y el gotcha crítico de `DRY_RUN = False`.
 - [[aws-subproyectos]] — `ebs-snapshot-rotation/` (Lambda + SAM) y
@@ -48,6 +48,22 @@ Rutas del servidor (hardcodeadas en scripts, no "arreglarlas"):
   propio flujo de deploy, ajeno a los contenedores del servidor.
 - [[credenciales-convenciones]] — norma del repo de credenciales en texto plano,
   dónde están las contraseñas/API keys y qué docs maestros existen.
+
+## Estado de migración a Docker-Alma-16GB (2026-08-20)
+
+### Migrados y corriendo
+| Proyecto | Carpeta | Servicio | Puerto | Firewall | Vhost |
+|----------|---------|----------|--------|----------|-------|
+| 35 | `35/` | Condominium (Odoo 18) | 8035 | ✅ 8035, 8072 | ✅ propiedades + ocreterraverde |
+| 36 | `36/` | Sicone (Odoo 18) | 8036 | ✅ 8036, 8076 | ✅ sicone.ai-mindnovation.com |
+| 37 | `37/` | SPT (Odoo 18) | 8037 | ✅ 8037, 8077 | ✅ spt.ai-mindnovation.com |
+| pgadmin4 | `pgadmin4/` | pgAdmin4 | 8010 | ✅ 8010 | ✅ pgadmin.gestorconsultoria.com.co |
+| 43 | `43/` | Trading (FastAPI) | 8043 | ⏳ pendiente | ✅ trading.gestorconsultoria.com.co |
+
+### Pendientes
+- **43 (Trading):** Backup restaurado, compose listo, red `infra_shared` creada. Falta levantar servicio y abrir firewall 8043.
+- **36, 37:** Contenedores corriendo pero backups nocturnos pendientes para refrescar datos.
+- **Bastion:** Copiar vhosts actualizados y recargar nginx.
 
 ## Documentación por proyecto
 

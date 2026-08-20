@@ -26,7 +26,7 @@ La infraestructura se distribuye en 5 servidores Linux (acceso `root`):
 | **Docker - New - 01** (`46.224.72.175` / `10.0.0.4`) | Contenedores | `35`, `39` (Metabase), `42` (Showcase), Trading (`43`), entre otros |
 | **Docker - New - 02** (`77.42.26.60` / `10.0.0.5`) | Contenedores | `41` (Prospectum) — confirmado por vhost |
 | **Docker - New - 03** (`37.27.190.155` / `10.0.0.2`) | Contenedores | `29`, `32` (n8n), `36` (Sicone), `37` (SPT), `38` (Gestor), entre otros |
-| **Docker - Alma - 16GB** (`2.29.11.73` / `10.0.0.6`) | Contenedores | *Por asignar* |
+| **Docker - Alma - 16GB** (`2.29.11.73` / `10.0.0.6`) | Contenedores | `35` (Condominium), `36` (Sicone), `37` (SPT), `pgadmin4`, `43` (Trading) |
 
 ---
 

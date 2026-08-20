@@ -49,7 +49,7 @@ Cada nodo corre Docker con los contenedores de los proyectos. No exponen puertos
 | **Docker - New - 01** | `46.224.72.175` | `10.0.0.4` | `35`, `39` (Metabase), `42` (Showcase), Trading (`43`) |
 | **Docker - New - 02** | `77.42.26.60` | `10.0.0.5` | `41` (Prospectum) |
 | **Docker - New - 03** | `37.27.190.155` | `10.0.0.2` | `29`, `32` (n8n), `36` (Sicone), `37` (SPT), `38` (Gestor) |
-| **Docker - Alma - 16GB** | `2.29.11.73` | `10.0.0.6` | *Por asignar* |
+| **Docker - Alma - 16GB** | `2.29.11.73` | `10.0.0.6` | `35` (Condominium), `36` (Sicone), `37` (SPT), `pgadmin4`, `43` (Trading) |
 
 ### 3. Contenedores
 

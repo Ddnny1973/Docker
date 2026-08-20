@@ -1,4 +1,4 @@
-console.log("Versión index.js: 2026-03-05.01");
+console.log("Versión index.js: 2026-03-05.05");
 import dotenv from 'dotenv';
 dotenv.config();
 import express from 'express';
@@ -11,7 +11,51 @@ const { Client, LocalAuth } = pkg;
 const app = express();
 app.use(express.json());
 
-// Manejo de promesas rechazadas
+// Limpiar SingletonLock de Chromium al iniciar
+const cleanSingletonLocks = () => {
+    const authDir = '/app/.wwebjs_auth';
+    try {
+        if (fs.existsSync(authDir)) {
+            for (const session of fs.readdirSync(authDir)) {
+                const lockFile = path.join(authDir, session, 'SingletonLock');
+                if (fs.existsSync(lockFile)) {
+                    fs.unlinkSync(lockFile);
+                    console.log(`🔓 SingletonLock eliminado: ${lockFile}`);
+                }
+            }
+        }
+    } catch (error) {
+        console.warn(`⚠️ Error limpiando SingletonLocks: ${error.message}`);
+    }
+};
+cleanSingletonLocks();
+
+// Cola serializada: un envío a la vez para no saturar Puppeteer
+const sendQueue = [];
+let sending = false;
+
+const processQueue = async () => {
+    if (sending || sendQueue.length === 0) return;
+    sending = true;
+    const { chatId, message, resolve, reject } = sendQueue.shift();
+    try {
+        await client.sendMessage(chatId, message);
+        resolve({ ok: true });
+    } catch (err) {
+        reject(err);
+    } finally {
+        sending = false;
+        processQueue();
+    }
+};
+
+const enqueueSend = (chatId, message) => {
+    return new Promise((resolve, reject) => {
+        sendQueue.push({ chatId, message, resolve, reject });
+        processQueue();
+    });
+};
+
 process.on('unhandledRejection', (reason, promise) => {
     console.error(`⚠️ Promesa rechazada no manejada:`, reason);
 });
@@ -87,7 +131,7 @@ const startClient = async () => {
             }),
             puppeteer: {
                 headless: true,
-                protocolTimeout: 120000,  // ⬅️ FIX 1: 120 segundos timeout
+                protocolTimeout: 300000,
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
@@ -116,12 +160,6 @@ const startClient = async () => {
         
         client.on('authenticated', () => {
             console.log(`🔐 Cliente autenticado (${SESSION_ID})`);
-            setTimeout(() => {
-                if (!clientReady) {
-                    console.log(`✅ Activando modo sin ready event`);
-                    clientReady = true;
-                }
-            }, 5000);
         });
         
         client.on('loading_screen', (percent, message) => {
@@ -139,11 +177,11 @@ const startClient = async () => {
             
             if (reason !== 'LOGOUT') {
                 console.log(`🔄 Reiniciando cliente en 5 segundos...`);
-                client.destroy();
+                client.destroy().catch(() => {});
                 setTimeout(() => startClient(), 5000);
             } else {
                 console.log(`🛑 Sesión cerrada por LOGOUT`);
-                client.destroy();
+                client.destroy().catch(() => {});
             }
         });
 
@@ -154,13 +192,11 @@ const startClient = async () => {
                 console.log(`🔔 Evento 'message_create' disparado - isStatus: ${msg.isStatus}, fromMe: ${msg.fromMe}, type: ${msg.type}`);
                 
                 try {
-                    // Ignorar estados/stories
                     if (msg.isStatus) {
                         console.log(`⭐️ Mensaje ignorado: es un estado/story`);
                         return;
                     }
 
-                    // Obtener nombre del contacto
                     let contactName = msg.from;
                     let chat = null;
                     
@@ -194,12 +230,9 @@ const startClient = async () => {
                         media_base64: null
                     };
 
-                    // ⬇️ FIX 2: Descarga de media con timeout y manejo de errores
                     if (SAVE_MEDIA && msg.hasMedia) {
                         try {
                             console.log(`📥 Intentando descargar media (${msg.type})...`);
-                            
-                            // Timeout manual de 45 segundos
                             const DOWNLOAD_TIMEOUT = 45000;
                             
                             const media = await Promise.race([
@@ -283,17 +316,12 @@ const startClient = async () => {
         }
 
         try {
-            const initPromise = client.initialize();
-            const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Auth timeout')), 60000)
-            );
-            
-            await Promise.race([initPromise, timeoutPromise]);
+            await client.initialize();
             console.log(`🔄 Cliente inicializado (${SESSION_ID})`);
         } catch (initError) {
             console.error(`⚠️ Error en initialize:`, initError.message);
-            client.initialize().catch(err => {
-                console.error(`❌ Error adicional:`, err.message);
+            client.destroy().catch(() => {}).finally(() => {
+                setTimeout(() => startClient(), 5000);
             });
         }
     } catch (error) {
@@ -304,7 +332,6 @@ const startClient = async () => {
 
 startClient();
 
-// ⬇️ FIX 3: Endpoint de envío mejorado para manejar grupos
 app.post('/send', async (req, res) => {
     const { number, message } = req.body;
     
@@ -318,53 +345,55 @@ app.post('/send', async (req, res) => {
         });
     }
 
-    try {
-        // Determinar si es grupo o contacto individual
-        let chatId;
-        
-        if (number.includes('@g.us')) {
-            // Ya viene con formato de grupo
-            chatId = number;
-        } else if (number.includes('@c.us')) {
-            // Ya viene con formato de contacto
-            chatId = number;
-        } else if (number.includes('@')) {
-            // Ya tiene algún sufijo, usar tal cual
-            chatId = number;
-        } else {
-            // Solo número, asumir que es contacto individual
-            chatId = `${number}@c.us`;
-        }
-        
-        console.log(`📤 Enviando mensaje a: ${chatId}`);
-        
-        await client.sendMessage(chatId, message);
-        console.log(`✅ Mensaje enviado a ${chatId}: ${message.substring(0, 50)}...`);
-        
-        res.json({ status: 'enviado', number: chatId });
-    } catch (error) {
-        console.error(`❌ Error enviando mensaje:`, error);
-        
-        if (error.message.includes('no WhatsApp account') || 
-            error.message.includes('not found')) {
-            return res.status(404).json({ 
-                error: 'Usuario no registrado en WhatsApp',
-                number 
-            });
-        }
-        
-        res.status(500).json({ error: error.toString() });
+    let chatId;
+    if (number.includes('@g.us') || number.includes('@c.us') || number.includes('@')) {
+        chatId = number;
+    } else {
+        chatId = `${number}@c.us`;
     }
+
+    const MAX_RETRIES = 3;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            console.log(`📤 Enviando mensaje a: ${chatId} (intento ${attempt}/${MAX_RETRIES})`);
+            await enqueueSend(chatId, message);
+            console.log(`✅ Mensaje enviado a ${chatId}: ${message.substring(0, 50)}...`);
+            return res.json({ status: 'enviado', number: chatId });
+        } catch (error) {
+            console.error(`❌ Error enviando mensaje (intento ${attempt}):`, error.message);
+            if (attempt < MAX_RETRIES) {
+                const waitSec = attempt * 5;
+                console.log(`🔄 Reintentando en ${waitSec}s...`);
+                await new Promise(r => setTimeout(r, waitSec * 1000));
+            }
+        }
+    }
+    
+    res.status(500).json({ error: 'Error enviando mensaje después de múltiples intentos' });
 });
 
 app.get('/status', (req, res) => {
     res.json({ 
         status: clientReady ? 'ready' : 'not_ready',
         session: SESSION_ID,
+        queue: sendQueue.length,
+        sending: sending,
         message: clientReady ? 
             `📋 API WhatsApp (${SESSION_ID}) funcionando` : 
             `⏳ API WhatsApp (${SESSION_ID}) iniciando...`
     });
+});
+
+app.get('/restart', async (req, res) => {
+    console.log(`🔄 Reinicio solicitado para sesión: ${SESSION_ID}`);
+    clientReady = false;
+    try {
+        if (client) {
+            await client.destroy().catch(() => {});
+        }
+    } catch (e) {}
+    res.json({ status: 'reiniciando', session: SESSION_ID });
+    setTimeout(() => startClient(), 3000);
 });
 
 app.listen(3000, () => {

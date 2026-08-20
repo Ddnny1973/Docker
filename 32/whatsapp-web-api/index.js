@@ -1,4 +1,4 @@
-console.log("Versión index.js: 2026-03-05.03");
+console.log("Versión index.js: 2026-03-05.04");
 import dotenv from 'dotenv';
 dotenv.config();
 import express from 'express';
@@ -324,49 +324,56 @@ app.post('/send', async (req, res) => {
         return res.status(400).json({ error: 'number y message son requeridos' });
     }
 
-    if (!clientReady || !client) {
+    if (!client || !client.pupPage) {
         return res.status(503).json({ 
             error: 'Cliente WhatsApp no está listo. Intenta en unos segundos.' 
         });
     }
 
-    try {
-        // Determinar si es grupo o contacto individual
-        let chatId;
-        
-        if (number.includes('@g.us')) {
-            // Ya viene con formato de grupo
-            chatId = number;
-        } else if (number.includes('@c.us')) {
-            // Ya viene con formato de contacto
-            chatId = number;
-        } else if (number.includes('@')) {
-            // Ya tiene algún sufijo, usar tal cual
-            chatId = number;
-        } else {
-            // Solo número, asumir que es contacto individual
-            chatId = `${number}@c.us`;
+    const waitForReady = async (maxWaitMs = 60000, intervalMs = 3000) => {
+        const start = Date.now();
+        while (Date.now() - start < maxWaitMs) {
+            if (clientReady) return true;
+            await new Promise(r => setTimeout(r, intervalMs));
         }
-        
-        console.log(`📤 Enviando mensaje a: ${chatId}`);
-        
-        await client.sendMessage(chatId, message);
-        console.log(`✅ Mensaje enviado a ${chatId}: ${message.substring(0, 50)}...`);
-        
-        res.json({ status: 'enviado', number: chatId });
-    } catch (error) {
-        console.error(`❌ Error enviando mensaje:`, error);
-        
-        if (error.message.includes('no WhatsApp account') || 
-            error.message.includes('not found')) {
-            return res.status(404).json({ 
-                error: 'Usuario no registrado en WhatsApp',
-                number 
+        return clientReady;
+    };
+
+    if (!clientReady) {
+        console.log(`⏳ Esperando que WhatsApp esté listo...`);
+        const ready = await waitForReady();
+        if (!ready) {
+            return res.status(503).json({ 
+                error: 'Cliente WhatsApp no está listo después de esperar.' 
             });
         }
-        
-        res.status(500).json({ error: error.toString() });
     }
+
+    let chatId;
+    if (number.includes('@g.us') || number.includes('@c.us') || number.includes('@')) {
+        chatId = number;
+    } else {
+        chatId = `${number}@c.us`;
+    }
+
+    const MAX_RETRIES = 3;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            console.log(`📤 Enviando mensaje a: ${chatId} (intento ${attempt}/${MAX_RETRIES})`);
+            await client.sendMessage(chatId, message);
+            console.log(`✅ Mensaje enviado a ${chatId}: ${message.substring(0, 50)}...`);
+            return res.json({ status: 'enviado', number: chatId });
+        } catch (error) {
+            console.error(`❌ Error enviando mensaje (intento ${attempt}):`, error.message);
+            
+            if (attempt < MAX_RETRIES) {
+                console.log(`🔄 Reintentando en ${attempt * 3}s...`);
+                await new Promise(r => setTimeout(r, attempt * 3000));
+            }
+        }
+    }
+    
+    res.status(500).json({ error: 'Error enviando mensaje después de múltiples intentos' });
 });
 
 app.get('/status', (req, res) => {
@@ -377,6 +384,18 @@ app.get('/status', (req, res) => {
             `📋 API WhatsApp (${SESSION_ID}) funcionando` : 
             `⏳ API WhatsApp (${SESSION_ID}) iniciando...`
     });
+});
+
+app.get('/restart', async (req, res) => {
+    console.log(`🔄 Reinicio solicitado para sesión: ${SESSION_ID}`);
+    clientReady = false;
+    try {
+        if (client) {
+            await client.destroy().catch(() => {});
+        }
+    } catch (e) {}
+    res.json({ status: 'reiniciando', session: SESSION_ID });
+    setTimeout(() => startClient(), 3000);
 });
 
 app.listen(3000, () => {

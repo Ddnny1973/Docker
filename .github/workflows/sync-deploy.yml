@@ -1,0 +1,37 @@
+name: Sync Deploy Files
+
+on:
+  push:
+    branches: [trunk]
+    paths:
+      - '35/**'
+      - '36/**'
+      - '37/**'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/ci-deploy
+          chmod 600 ~/.ssh/ci-deploy
+          ssh-keyscan -H 2.29.11.73 >> ~/.ssh/known_hosts
+
+      - name: Sync files to server
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/ci-deploy -o StrictHostKeyChecking=no" \
+            35/docker-compose.yml \
+            35/config/ \
+            36/docker-compose.yml \
+            37/docker-compose.yml \
+            37/config/ \
+            root@2.29.11.73:/data/odoo/
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/ci-deploy

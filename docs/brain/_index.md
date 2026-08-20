@@ -58,10 +58,9 @@ Rutas del servidor (hardcodeadas en scripts, no "arreglarlas"):
 | 36 | `36/` | Sicone (Odoo 18) | 8036 | ✅ 8036, 8076 | ✅ sicone.ai-mindnovation.com |
 | 37 | `37/` | SPT (Odoo 18) | 8037 | ✅ 8037, 8077 | ✅ spt.ai-mindnovation.com |
 | pgadmin4 | `pgadmin4/` | pgAdmin4 | 8010 | ✅ 8010 | ✅ pgadmin.gestorconsultoria.com.co |
-| 43 | `43/` | Trading (FastAPI) | 8043 | ⏳ pendiente | ✅ trading.gestorconsultoria.com.co |
+| 43 | `43/` | Trading (FastAPI) | 8043 | ✅ 8043 | ✅ trading.gestorconsultoria.com.co |
 
 ### Pendientes
-- **43 (Trading):** Backup restaurado, compose listo, red `infra_shared` creada. Falta levantar servicio y abrir firewall 8043.
 - **36, 37:** Contenedores corriendo pero backups nocturnos pendientes para refrescar datos.
 - **Bastion:** Copiar vhosts actualizados y recargar nginx.
 

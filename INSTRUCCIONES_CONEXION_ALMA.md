@@ -9,50 +9,30 @@
 | **IP interna** | `10.0.0.6` |
 | **Usuario** | `root` |
 | **Specs** | 8 vCPU / 16 GB RAM / 160 GB disco |
-| **OS** | AlmaLinux 9 |
+| **OS** | AlmaLinux 10.2 |
 
-## Configurar la clave SSH
+## Estado del servidor (20 de agosto de 2026)
 
-### 1. Generar la clave en el servidor
+| Componente | Estado |
+| :--- | :--- |
+| Docker CE | `29.7.2` — data-root en `/data/docker` |
+| Docker Compose | `v5.5.0` |
+| Storage Box | Montado en `/mnt/hetzner-backup` (1TB, 89% usado) |
+| Firewall | `firewalld` activo — SSH, cockpit, dhcpv6-client |
+| Clave SSH local | `~/.ssh/docker-alma-16gb` (PC) → alias `docker-alma` |
 
-```bash
-ssh-keygen -t ed25519 -f /root/.ssh/docker-alma-16gb -C "docker-alma-16gb@2.29.11.73"
-```
-
-### 2. Copiar la clave pública a la máquina local
-
-```bash
-cat /root/.ssh/docker-alma-16gb.pub
-```
-
-Copiar la salida y pegarla en `~/.ssh/docker-alma-16gb.pub` en la máquina local.
-
-### 3. Permisos de la clave (servidor)
+## Conexión SSH
 
 ```bash
-chmod 600 /root/.ssh/docker-alma-16gb
-chmod 644 /root/.ssh/docker-alma-16gb.pub
+ssh docker-alma
 ```
 
-### 4. Probar la conexión
-
-```bash
-ssh -i ~/.ssh/docker-alma-16gb root@2.29.11.73
-```
-
-### 5. (Opcional) Configurar alias SSH
-
-Para no tener que escribir la ruta de la clave cada vez, agregar a `~/.ssh/config`:
+Alias configurado en `~/.ssh/config`:
 
 ```
 Host docker-alma
     HostName 2.29.11.73
     User root
     IdentityFile ~/.ssh/docker-alma-16gb
-```
-
-Y después simplemente:
-
-```bash
-ssh docker-alma
+    IdentitiesOnly yes
 ```

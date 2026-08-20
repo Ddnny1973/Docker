@@ -6,7 +6,7 @@ repo: DOCKER
 tags: [backup, retencion, hetzner, storagebox]
 related:
   - "[[_index]]"
-updated: 2026-08-02
+updated: 2026-08-20
 owner: dueño del repo
 ---
 
@@ -39,4 +39,7 @@ owner: dueño del repo
 - Proyectos en `/data/odoo/<NN>/` (volumen/partición de datos).
 - Docker data-root en `/data/docker` (imágenes y volúmenes).
 - Backups en el Storage Box de Hetzner montado por SSHFS en
-  `/mnt/hetzner-backup` (automontaje por Systemd, ver `CX23_PLANTILLA_SETUP.md`).
+  `/mnt/hetzner-backup` (montaje por script + servicio systemd, ver
+  `CX23_PLANTILLA_SETUP.md` paso 4). El script usa autenticación por
+  contraseña (`password_stdin`) y se ejecuta al arrancar el servidor vía
+  `mount-hetzner.service`.

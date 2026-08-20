@@ -140,7 +140,7 @@ services:
           cpus: '3.0'
           memory: 4000M
         reservations:
-          cpus: '1.0'
+          cpus: '0.5'
           memory: 2000M
 
   # 🆕 Servicio de transcripción de audio con Whisper
@@ -175,37 +175,37 @@ services:
           cpus: '0.5'
           memory: 500M
 
-  # wppapi:
-  #   build:
-  #     context: ./whatsapp-web-api
-  #   container_name: wppapi
-  #   restart: unless-stopped
-  #   environment:
-  #     - WPP_SESSION_ID=default
-  #     - ENABLE_RECEIVE_MESSAGES=true
-  #     - WEBHOOK_URL=http://n8n:5678/webhook/whatsapp-messages
-  #     - SAVE_MEDIA=true
-  #     - MEDIA_PATH=/app/media
-  #   volumes:
-  #     - ./wppapi_data:/app/.wwebjs_auth
-  #     - ./wppapi-media:/app/media
-  #     - wppapi_tmp:/tmp
-  #   expose:
-  #     - "3000"
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         cpus: '2.0'
-  #         memory: 1500M
-  #       reservations:
-  #         cpus: '0.5'
-  #         memory: 500M
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:3000/status"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-  #     start_period: 60s
+  wppapi:
+    build:
+      context: ./whatsapp-web-api
+    container_name: wppapi
+    restart: unless-stopped
+    environment:
+      - WPP_SESSION_ID=default
+      - ENABLE_RECEIVE_MESSAGES=true
+      - WEBHOOK_URL=http://n8n:5678/webhook/whatsapp-messages
+      - SAVE_MEDIA=true
+      - MEDIA_PATH=/app/media
+    volumes:
+      - ./wppapi_data:/app/.wwebjs_auth
+      - ./wppapi-media:/app/media
+      - wppapi_tmp:/tmp
+    expose:
+      - "3000"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1500M
+        reservations:
+          cpus: '1.0'
+          memory: 500M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   wppapi_mb:
     build:

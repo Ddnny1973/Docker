@@ -11,21 +11,22 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Setup SSH Key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H 2.29.11.73 >> ~/.ssh/known_hosts 2>/dev/null || true
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/ci-deploy
+          chmod 600 ~/.ssh/ci-deploy
+          ssh-keyscan -H 2.29.11.73 >> ~/.ssh/known_hosts
       
-      - name: Deploy to server
+      - name: Sync ALL files to server
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no root@2.29.11.73 \
-            "cd /data/odoo && git pull origin trunk && echo '✅ Deployment successful'"
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/ci-deploy -o StrictHostKeyChecking=no" \
+            . \
+            root@2.29.11.73:/data/odoo/
       
-      - name: Verify deployment
-        run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no root@2.29.11.73 \
-            "cd /data/odoo && git log --oneline -1 && git status"
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/ci-deploy

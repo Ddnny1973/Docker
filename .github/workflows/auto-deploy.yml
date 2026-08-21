@@ -20,9 +20,11 @@ jobs:
           chmod 600 ~/.ssh/ci-deploy
           ssh-keyscan -H 2.29.11.73 >> ~/.ssh/known_hosts
       
-      - name: Sync ALL files to server
+      - name: Sync files to server (safe, no delete)
         run: |
-          rsync -avz --delete \
+          rsync -avz \
+            --exclude='.git/' \
+            --exclude-from=.gitignore \
             -e "ssh -i ~/.ssh/ci-deploy -o StrictHostKeyChecking=no" \
             . \
             root@2.29.11.73:/data/odoo/

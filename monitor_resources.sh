@@ -3,7 +3,7 @@
 # Uso: Ejecutar vía cron cada 5 minutos
 # */5 * * * * /data/odoo/monitor_resources.sh
 
-LOG_FILE="/var/log/monitor_resources.log"
+LOG_FILE="/mnt/hetzner-backup/monitor_resources.log"
 THRESHOLD_CPU=80      # Alerta si CPU > 80%
 THRESHOLD_MEM=85      # Alerta si MEM > 85%
 

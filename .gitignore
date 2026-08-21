@@ -19,3 +19,26 @@ Thumbs.db
 # Python
 __pycache__/
 *.pyc
+
+# ============================================
+# DIRECTORIOS DE DATOS Y RUNTIME (no versionados)
+# ============================================
+32/ocr-service/
+32/pdf2img-service/
+32/logs/
+32/n8n-data/
+32/postgres-data/
+32/redis-data/
+32/pgvector-data/
+32/wppapi_data/
+32/wppapi_mb_data/
+32/wppapi_ai_data/
+32/wppapi-ai-2-media/
+32/wppapi-media/
+pgadmin4/
+monitor_resources.sh
+
+# Archivos de configuración local
+*/config/
+*.save
+*.bak

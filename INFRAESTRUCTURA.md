@@ -20,13 +20,13 @@ La infraestructura se distribuye en 5 servidores Linux (acceso `root`):
 
 ### Distribución de proyectos por servidor
 
-| Servidor | Rol | Proyectos conocidos |
+| Servidor | Rol | Proyectos |
 | :--- | :--- | :--- |
 | **Bastion** (`10.0.0.3`) | Nginx — proxy reverso de todos los dominios | Ningún contenedor; solo nginx con vhosts de `sites-available/` |
-| **Docker - New - 01** (`46.224.72.175` / `10.0.0.4`) | Contenedores | `35`, `39` (Metabase), `42` (Showcase), Trading (`43`), entre otros |
-| **Docker - New - 02** (`77.42.26.60` / `10.0.0.5`) | Contenedores | `41` (Prospectum) — confirmado por vhost |
-| **Docker - New - 03** (`37.27.190.155` / `10.0.0.2`) | Contenedores | `29`, `32` (n8n), `36` (Sicone), `37` (SPT), `38` (Gestor), entre otros |
-| **Docker - Alma - 16GB** (`2.29.11.73` / `10.0.0.6`) | Contenedores | `35` (Condominium), `36` (Sicone), `37` (SPT), `pgadmin4`, `43` (Trading) |
+| **Docker - New - 01** (`46.224.72.175` / `10.0.0.4`) | Contenedores | Por confirmar (migración a Alma completada) |
+| **Docker - New - 02** (`77.42.26.60` / `10.0.0.5`) | Contenedores | Vacío — desmantelable |
+| **Docker - New - 03** (`37.27.190.155` / `10.0.0.2`) | Contenedores | Vacío — desmantelable |
+| **Docker - Alma - 16GB** (`2.29.11.73` / `10.0.0.6`) | Contenedores | **✅ CONSOLIDADO:** `29`, `30`, `32` (n8n + IA), `35`, `36`, `37`, `41`, `42`, `43`, `pgadmin4` |
 
 ---
 

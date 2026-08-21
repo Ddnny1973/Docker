@@ -25,6 +25,10 @@ services:
       - N8N_PORT=5678
       - N8N_PROTOCOL=http
       - WEBHOOK_URL=https://n8n.gestorconsultoria.com.co/
+      
+      # Conexión a backend (Trading)
+      - BACKEND_URL=http://10.0.0.6:8043
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
 
       # Variables críticas para programación
       - TZ=America/Bogota

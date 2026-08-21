@@ -25,6 +25,9 @@ jobs:
             set -e
             cd /data/odoo
             
+            echo "==> Configuring git safe directory..."
+            git config --global --add safe.directory /data/odoo
+            
             echo "==> Pulling latest code from trunk..."
             git pull origin trunk
             

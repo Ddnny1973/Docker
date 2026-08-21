@@ -18,6 +18,17 @@ Docs and git commits are in **Spanish** — keep that convention. Push to `origi
 - Si tu cambio deja desactualizado algún archivo de `docs/brain/`, actualízalo como parte del mismo PR y actualiza `updated` en el frontmatter.
 - Si falta documentar un concepto nuevo relevante, proponle al usuario crear un archivo en `docs/brain/` en vez de dejarlo sin documentar.
 
+## Flujo de Deploy (GitHub Actions)
+
+El workflow `.github/workflows/auto-deploy.yml` se dispara en cada push a `trunk`:
+1. ✅ Carga SSH key desde `${{ secrets.DEPLOY_SSH_KEY }}`
+2. ✅ Configura `git safe.directory` (para evitar "dubious ownership")
+3. ✅ Ejecuta: `git pull origin trunk`
+4. ✅ Ejecuta: `docker compose up -d` (reinicia servicios)
+5. ✅ Muestra: `docker compose ps` (status final)
+
+**Seguridad:** No usa `--delete`, 100% seguro. Ver [[comandos-destructivos]].
+
 ## Control de ramas
 
 - Antes de modificar o crear archivos, valida la rama actual. Si estás en `trunk`, crea una rama de trabajo (ej. `feat/...`, `docs/...`). Si estás en otra rama, pregunta antes de operar.

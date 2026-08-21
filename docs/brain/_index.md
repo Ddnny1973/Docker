@@ -49,20 +49,36 @@ Rutas del servidor (hardcodeadas en scripts, no "arreglarlas"):
 - [[credenciales-convenciones]] — norma del repo de credenciales en texto plano,
   dónde están las contraseñas/API keys y qué docs maestros existen.
 
-## Estado de migración a Docker-Alma-16GB (2026-08-20)
+## Estado de migración a Docker-Alma-16GB (2026-08-20) — ✅ **COMPLETADA**
 
-### Migrados y corriendo
-| Proyecto | Carpeta | Servicio | Puerto | Firewall | Vhost |
-|----------|---------|----------|--------|----------|-------|
-| 35 | `35/` | Condominium (Odoo 18) | 8035 | ✅ 8035, 8072 | ✅ propiedades + ocreterraverde |
-| 36 | `36/` | Sicone (Odoo 18) | 8036 | ✅ 8036, 8076 | ✅ sicone.ai-mindnovation.com |
-| 37 | `37/` | SPT (Odoo 18) | 8037 | ✅ 8037, 8077 | ✅ spt.ai-mindnovation.com |
-| pgadmin4 | `pgadmin4/` | pgAdmin4 | 8010 | ✅ 8010 | ✅ pgadmin.gestorconsultoria.com.co |
-| 43 | `43/` | Trading (FastAPI) | 8043 | ✅ 8043 | ✅ trading.gestorconsultoria.com.co |
+### ✅ Todos los Proyectos Migrados
+| Proyecto | Carpeta | Servicio | Puerto | Estado | Vhost |
+|----------|---------|----------|--------|--------|-------|
+| **29** | `29/` | Odoo 16 (legacy) | 8029 | ⚠️ Unhealthy | No hay vhost |
+| **30** | `30/` | Odoo 16 (heredada) | 8030 | ⚠️ Unhealthy | No hay vhost |
+| **32** | `32/` | **n8n + Stack IA** | 8032 | ⚠️ Unhealthy | ✅ n8n.gestorconsultoria.com.co |
+| 35 | `35/` | Condominium (Odoo 18) | 8035 | ✅ Healthy | ✅ propiedades + ocreterraverde |
+| 36 | `36/` | Sicone (Odoo 18) | 8036 | ✅ Healthy | ✅ sicone.ai-mindnovation.com |
+| 37 | `37/` | SPT (Odoo 18) | 8037 | ✅ Healthy | ✅ spt.ai-mindnovation.com |
+| 41 | `41/` | Prospectum (Odoo 18) | 8041 | ✅ Healthy | ✅ prospectum.ai-mindnovation.com |
+| 42 | `42/` | Showcase (Odoo 18) | 8042 | ✅ Healthy | ✅ showcase.ai-mindnovation.com |
+| 43 | `43/` | Trading (FastAPI) | 8043 | ✅ Healthy | ✅ trading.gestorconsultoria.com.co |
+| pgadmin4 | `pgadmin4/` | pgAdmin4 | 8010 | ⚠️ Unhealthy | ✅ pgadmin.gestorconsultoria.com.co |
 
-### Pendientes
-- **36, 37:** Contenedores corriendo pero backups nocturnos pendientes para refrescar datos.
-- **Bastion:** Copiar vhosts actualizados y recargar nginx.
+### Contenedores de Proyecto 32 (n8n + IA)
+- `32-n8n-1` — n8n (⚠️ unhealthy, ver logs)
+- `32-db-1` — PostgreSQL 12 (9032)
+- `32-redis-1` — Redis (interno)
+- `32-pgvectordb-1` — pgvector + PostgreSQL 14 (9033)
+- `32-ocr-1` — Servicio OCR (5001)
+- `32-pdf2img-1` — Servicio pdf2img (5002)
+- `transcription` — Servicio transcripción (5003)
+- `wppapi`, `wppapi_mb` — WhatsApp APIs
+
+### 🧹 Limpieza Pendiente
+- **Proyectos 29 y 30** (Odoo 16, ambos unhealthy) — considerar eliminar si no se usan.
+- **n8n unhealthy** — revisar logs para diagnosticar.
+- **Docker-New-03** (`10.0.0.2`) — confirmar si está vacío y puede desmantelarse.
 
 ## Documentación por proyecto
 

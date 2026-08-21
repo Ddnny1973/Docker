@@ -7,30 +7,52 @@ tags: [git, deploy, nginx, hetzner, trunk, github-actions]
 related:
   - "[[_index]]"
   - "[[arquitectura-contenedores]]"
-updated: 2026-08-20
+updated: 2026-08-21
 owner: dueño del repo
 ---
 
 # Deploy y sincronización
 
-## GitHub Actions: sync de archivos de despliegue
+## GitHub Actions: Auto-Deploy a servidor Alma
 
 Para el servidor **Docker Alma 16GB** (`2.29.11.73`), el repo usa GitHub Actions
-para sincronizar automáticamente archivos de despliegue:
+para sincronizar y desplegar automáticamente:
 
-- **Workflow:** `.github/workflows/sync-deploy.yml`
-- **Trigger:** push a `trunk` que modifique `35/`, `36/` o `37/`
-- **Qué sync:** `docker-compose.yml` y `config/` de cada proyecto
-- **Qué NO sync:** `postgresql/`, `filestore/`, `extra-addons/`, `.env`, backups
-- **Método:** SCP con SSH key dedicada (`ci-deploy@github-actions`)
-- **Servidor destino:** `/data/odoo/<NN>/`
+- **Workflow:** `.github/workflows/auto-deploy.yml`
+- **Trigger:** `push` a rama `trunk`
+- **Método:** `appleboy/ssh-action` (SSH Key) → `git pull origin trunk` → `docker compose up -d`
+- **SSH Key:** `DEPLOY_SSH_KEY` (almacenada en GitHub Secrets)
+- **Usuario servidor:** `root@2.29.11.73:22`
+- **Directorio trabajo:** `/data/odoo/`
 
-El workflow solo copia archivos. **No reinicia servicios** — el usuario decide
-cuándo hacer `docker compose up -d` manualmente.
+### Flujo
 
-### Workflow manual
+1. GitHub Actions detecta push a `trunk`
+2. Carga SSH key desde `${{ secrets.DEPLOY_SSH_KEY }}`
+3. Ejecuta en servidor: `git pull origin trunk`
+4. Ejecuta: `docker compose up -d` (reinicia todos los servicios)
+5. Muestra estado: `docker compose ps`
 
-También se puede ejecutar manualmente desde GitHub Actions → "Sync Deploy Files" → "Run workflow".
+### Seguridad
+
+✅ **NO usa rsync con `--delete`** (ver [[comandos-destructivos]]).
+✅ **Usa `git pull`** (mismo modelo que Trading repo).
+✅ **Preserva datos** — solo sincroniza código, nunca toca `/data/odoo/postgresql/`, `/data/odoo/*/filestore/`, etc.
+
+### Desactivar workflow
+
+Si necesitas pushear a `trunk` sin disparar deploy:
+- Cambiar nombre de rama temporalmente
+- O aguardar hasta que el workflow esté configurado manualmente en GitHub
+
+### Sincronización manual (si es necesario)
+
+```bash
+# En el servidor
+cd /data/odoo
+git pull origin trunk
+docker compose up -d
+```
 
 ## Otros servidores (sin CI/CD)
 

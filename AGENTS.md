@@ -13,9 +13,10 @@ Docs and git commits are in **Spanish** — keep that convention. Push to `origi
 
 ## Cerebro digital del repo
 
-- Antes de responder preguntas sobre este repo, revisa `docs/brain/_index.md` y sigue sus enlaces si el tema es relevante.
-- Si tu cambio de código deja desactualizado, incorrecto o incompleto algún archivo de `docs/brain/`, actualízalo como parte del mismo PR (no lo dejes para después) y actualiza su campo `updated` en el frontmatter.
-- Si detectas que falta documentar un concepto nuevo relevante (componente, proceso, decisión), proponle al usuario crear un archivo nuevo en `docs/brain/` en vez de dejarlo sin documentar.
+- **Antes de responder** preguntas sobre este repo, revisa `docs/brain/_index.md` y sigue sus enlaces si el tema es relevante.
+- **CRÍTICO:** Cualquier comando destructivo (rm, rsync --delete, docker rm, etc.) debe documentar QUÉ puede borrar y requerir validación. Ver `docs/brain/comandos-destructivos.md`.
+- Si tu cambio deja desactualizado algún archivo de `docs/brain/`, actualízalo como parte del mismo PR y actualiza `updated` en el frontmatter.
+- Si falta documentar un concepto nuevo relevante, proponle al usuario crear un archivo en `docs/brain/` en vez de dejarlo sin documentar.
 
 ## Control de ramas
 

@@ -10,7 +10,7 @@ related:
   - "[[backups-retencion]]"
   - "[[aws-subproyectos]]"
   - "[[credenciales-convenciones]]"
-updated: 2026-08-20
+updated: 2026-08-21
 owner: dueño del repo
 ---
 
@@ -38,11 +38,13 @@ Rutas del servidor (hardcodeadas en scripts, no "arreglarlas"):
   puertos `80NN`/`90NN`, patrón Odoo `web` + `db-<NN>`, stack n8n de `32`,
   proyectos inactivos/cancelados.
 - [[deploy-y-sync]] — cómo llegan los cambios al servidor: GitHub Actions sincroniza
-  `docker-compose.yml` y `config/` de proyectos 35, 36, 37 y pgadmin4 vía SCP a
-  `2.29.11.73:/data/odoo/`. Vhosts nginx en `sites-available/` se despliegan
-  manualmente al Bastion.
+  con `git pull` vía `appleboy/ssh-action` a `2.29.11.73:/data/odoo/`. Vhosts nginx
+  en `sites-available/` se despliegan manualmente al Bastion.
 - [[backups-retencion]] — `backup_contenedor.sh`/`backup_todos.sh`,
   `prune_backups.py` y el gotcha crítico de `DRY_RUN = False`.
+- [[comandos-destructivos]] — **⚠️ CRÍTICO** — Validación y seguridad de comandos
+  que borran/sincronizan: rsync --delete, rm, docker rm, tar extraction. Checklist
+  obligatorio. Incluye incident 2026-08-21.
 - [[aws-subproyectos]] — `ebs-snapshot-rotation/` (Lambda + SAM) y
   `gc-wordoffice-infra/` (CloudFormation + scripts PowerShell): cada uno con su
   propio flujo de deploy, ajeno a los contenedores del servidor.

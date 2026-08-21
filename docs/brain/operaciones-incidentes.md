@@ -5,13 +5,123 @@ tags: [operaciones, incidentes, troubleshooting, docker, migracion]
 related:
   - "[[arquitectura-servidores]]"
   - "[[deploy-y-sync]]"
-updated: 2026-08-20
+updated: 2026-08-21
 owner: dueño del repo
 ---
 
 # Operaciones — Registro de Incidentes
 
 Documento para registrar problemas operacionales, causas raíz y resoluciones en la infraestructura de Docker.
+
+---
+
+## 2026-08-21 — 🔴 CRÍTICO: GitHub Actions rsync --delete borra datos de producción
+
+### Contexto
+
+Primera ejecución del workflow de GitHub Actions `.github/workflows/auto-deploy.yml` (antes llamado `sync-deploy.yml`). El flujo estaba diseñado para sincronizar cambios de código automáticamente al servidor `2.29.11.73:/data/odoo/` usando rsync.
+
+### Problema
+
+El workflow incluía el flag `--delete` en rsync:
+```bash
+rsync -avz --delete \
+  --exclude='.git/' \
+  --exclude-from=.gitignore \
+  -e "ssh -i ~/.ssh/ci-deploy ..." \
+  . \
+  root@2.29.11.73:/data/odoo/
+```
+
+**Resultado:** ⚠️ **BORRÓ TODOS LOS DATOS** de proyecto 43 (Trading) y pgadmin4:
+
+**Archivos eliminados:**
+- `43/postgres-trading-data/` (base de datos completa)
+- `43/redis-trading-data/` (datos Redis completa)
+- `43/scripts/`, `43/tests/`
+- `pgadmin4/private/` (configuración + sesiones + BD)
+- Sesiones HTTP de pgadmin4 (~45 archivos)
+
+### Causa Raíz
+
+**Comportamiento de rsync con `--delete`:**
+1. Source (GitHub repo): contiene SOLO código, NO tiene `/data/odoo/43/postgresql/`, `/data/odoo/43/filestore/`, etc.
+2. Destination (servidor): contiene datos de producción en esos directorios
+3. rsync **compara source vs destination** y borra en destination TODO lo que NO está en source
+4. **`.gitignore` no protege contra rsync --delete** — `.gitignore` solo afecta a git, no a rsync
+
+### Timeline
+
+1. **2026-08-21 ~09:00:** Workflow se dispara en push a `trunk`
+2. **~09:01:** GitHub Actions ejecuta rsync con `--delete`
+3. **~09:02:** Centenares de archivos de producción borrados:
+   ```
+   deleting 43/postgres-trading-data/...
+   deleting 43/redis-trading-data/...
+   deleting pgadmin4/private/...
+   ```
+4. **~10:00:** Descubrimiento del problema en GitHub Actions logs
+5. **~10:15:** Identificación de causa raíz: `--delete` en rsync
+6. **~10:30:** Commit de emergencia **fa3e911** para remover `--delete`
+
+### Intento de Recuperación
+
+1. **Comando usado:**
+   ```bash
+   cd /data/odoo
+   for dir in 29 30 32 35 36 37 41 42 43; do
+     BACKUP=$(ls -t /mnt/hetzner-backup/$dir/backup_${dir}_*.tar.gz 2>/dev/null | head -1)
+     if [ -n "$BACKUP" ]; then
+       tar -xzf "$BACKUP"
+     fi
+   done
+   docker compose up -d
+   ```
+
+2. **Restauración:** pgadmin4 y proyecto 43 se restauraron desde backup (timestamp 2026-08-21 ~05:00)
+3. **Pérdida de datos:** ~5 horas de cambios entre última copia de seguridad y el incident
+
+### Solución Implementada
+
+**Commit fa3e911:** Remover `--delete` de rsync
+- Ya no borra archivos en destination
+- Solo sincroniza código (lo que está en source)
+- Mantiene todos los datos de runtime
+
+**Commit c1a9285:** Cambio a modelo appleboy (SEGURO)
+- Cambiar de `rsync --delete` a `git pull origin trunk`
+- Modelo idéntico al usado en Trading repo (probado, seguro)
+- No hay riesgo de borrado destructivo
+
+### Lecciones Aprendidas
+
+1. ⚠️ **NUNCA rsync con `--delete` en infraestructura de datos** — Demasiado peligroso, sin margen de error
+2. ⚠️ **`.gitignore` NO protege contra rsync --delete** — `.gitignore` solo es para git; rsync ignora completamente
+3. ✅ **Usar `git pull` es más seguro** — Requiere clonar primero, preserva histórico git, nunca borra
+4. ✅ **Backup previo es salvavidas** — Recuperación posible PORQUE existía `/mnt/hetzner-backup/43/` con snapshots recientes
+5. ✅ **Validar scripts con DRY_RUN primero** — Para cualquier comando destructivo, siempre simular antes
+
+### Checklist: Prevención Futura
+
+- ✅ Remover `--delete` de rsync en TODOS los workflows
+- ✅ Documentar en [[comandos-destructivos]] con checklist obligatorio
+- ✅ Usar `git pull` en lugar de rsync para deploy de código
+- ✅ Requerir validación + confirmación para cualquier comando que borre
+- ✅ Mantener backups recientes y verificables
+
+### Estado Final
+
+- ✅ Workflow corregido (commits fa3e911, c1a9285)
+- ✅ Datos recuperados desde backup
+- ✅ Servicios operacionales
+- ✅ Documentación de prevención creada
+
+### Impacto
+
+- **Criticidad:** 🔴 **CRÍTICA** — Borrado masivo de datos de producción
+- **Duración:** ~1 hora (desde ejecución hasta descubrimiento y fix)
+- **Datos perdidos:** ~5 horas (entre backup 05:00 y incident 10:00)
+- **Recuperación:** Exitosa, sin corrupción
 
 ---
 

@@ -1,0 +1,31 @@
+name: Auto-Deploy to Docker Alma Server
+
+on:
+  push:
+    branches:
+      - trunk
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H 2.29.11.73 >> ~/.ssh/known_hosts 2>/dev/null || true
+      
+      - name: Deploy to server
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no root@2.29.11.73 \
+            "cd /data/odoo && git pull origin trunk && echo '✅ Deployment successful'"
+      
+      - name: Verify deployment
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no root@2.29.11.73 \
+            "cd /data/odoo && git log --oneline -1 && git status"

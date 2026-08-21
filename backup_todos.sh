@@ -2,8 +2,10 @@
 # Script para hacer backup de varios contenedores
 # Uso: ./backup_todos.sh
 
-# Lista de carpetas de contenedores a respaldar (modifica según tus necesidades)
-CONTAINERS=(16 29 30 32 33 34)
+# Lista de carpetas de contenedores a respaldar (consolidados en Alma-16GB)
+# Proyectos Odoo activos: 29, 30, 35, 36, 37, 41, 42, 43
+# Proyectos especiales: 32 (n8n+IA), pgadmin4
+CONTAINERS=(29 30 32 35 36 37 41 42 43 pgadmin4)
 
 
 

@@ -29,6 +29,7 @@ services:
       
       # Conexión a backend (Trading)
       - BACKEND_URL=http://10.0.0.6:8043
+      - TELEGRAM_CHAT_ID=1561962049
       - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
 
       # Variables críticas para programación

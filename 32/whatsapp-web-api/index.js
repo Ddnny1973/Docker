@@ -1,4 +1,4 @@
-console.log("Versión index.js: 2026-03-05.05");
+console.log("Versión index.js: 2026-08-27.01");
 import dotenv from 'dotenv';
 dotenv.config();
 import express from 'express';
@@ -33,6 +33,7 @@ cleanSingletonLocks();
 // Cola serializada: un envío a la vez para no saturar Puppeteer
 const sendQueue = [];
 let sending = false;
+const SEND_DELAY_MS = 2000; // pausa entre envíos para reducir presión sobre Chromium
 
 const processQueue = async () => {
     if (sending || sendQueue.length === 0) return;
@@ -40,20 +41,47 @@ const processQueue = async () => {
     const { chatId, message, resolve, reject } = sendQueue.shift();
     try {
         await client.sendMessage(chatId, message);
+        markActivity();
         resolve({ ok: true });
     } catch (err) {
+        markActivity();
         reject(err);
     } finally {
         sending = false;
-        processQueue();
+        // Pausa entre envíos para no saturar el navegador bajo presión de memoria
+        setTimeout(() => processQueue(), SEND_DELAY_MS);
     }
 };
 
 const enqueueSend = (chatId, message) => {
+    markActivity();
     return new Promise((resolve, reject) => {
         sendQueue.push({ chatId, message, resolve, reject });
         processQueue();
     });
+};
+
+// Watchdog: si no hay actividad de envío en cierto tiempo y la cola se queda
+// atascada, reinicia el cliente (Chromium colgado). Previene que un bloqueo
+// en sendMessage deje la cola zombie hasta reiniciar el servidor manualmente.
+let lastActivityAt = Date.now();
+const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 min sin actividad de queue
+const markActivity = () => { lastActivityAt = Date.now(); };
+
+const startWatchdog = () => {
+    setInterval(() => {
+        const idleFor = Date.now() - lastActivityAt;
+        // Solo reinicia si hay trabajo pendiente (cola no vacía o enviando) y el
+        // cliente lleva demasiado tiempo sin completar un envío.
+        if (client && (sendQueue.length > 0 || sending) && idleFor > INACTIVITY_TIMEOUT_MS) {
+            console.error(`🔥 WATCHDOG: sin actividad de envío por ${(idleFor/1000).toFixed(0)}s con trabajo pendiente. Reiniciando cliente (${SESSION_ID})...`);
+            clientReady = false;
+            client.destroy().catch(() => {}).finally(() => {
+                setTimeout(() => startClient(), 5000);
+            });
+            lastActivityAt = Date.now();
+        }
+    }, 30000);
 };
 
 process.on('unhandledRejection', (reason, promise) => {
@@ -131,7 +159,7 @@ const startClient = async () => {
             }),
             puppeteer: {
                 headless: true,
-                protocolTimeout: 300000,
+                protocolTimeout: 600000,
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
@@ -331,6 +359,7 @@ const startClient = async () => {
 };
 
 startClient();
+startWatchdog();
 
 app.post('/send', async (req, res) => {
     const { number, message } = req.body;

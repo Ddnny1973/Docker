@@ -171,6 +171,15 @@ services:
       - wppapi_mb_tmp:/tmp
     expose:
       - "3000"
+    # Limitar el bucle de CPU de Chromium colgado y la fuga de hilos/procesos
+    cpus: 2.0
+    pids_limit: 512
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/status').then(r => { if (!r.ok) process.exit(1); return r.json(); }).then(j => { if (j.status !== 'ready') process.exit(1); }).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   wppapi_ai:
     build:

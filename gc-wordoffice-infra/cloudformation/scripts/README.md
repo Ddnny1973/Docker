@@ -108,6 +108,73 @@ reinicia el servidor manualmente.
 Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
 ```
 
+## Monitoreo interno de gcusers-v2 (muestreo por CSV)
+
+Registro automático del estado del servidor **sin CloudWatch y sin intervención
+manual**: una tarea programada muestra cada 5 minutos y agrega una línea a un
+CSV diario. Su propósito es dejar evidencia histórica de los días hábiles para
+correlacionar los reportes de lentitud con lo que ocurría en el equipo en ese
+momento (qué proceso disparaba la CPU o la RAM).
+
+### Instalación (una sola vez)
+
+1. Copia los dos scripts al servidor (p. ej. a `C:\Scripts\`):
+   - `monitor-gcusers-v2.ps1`
+   - `install-gcusers-monitor.ps1`
+2. En PowerShell **como Administrador**:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File C:\Scripts\install-gcusers-monitor.ps1
+   ```
+
+Esto crea la tarea `GCMonitor` (SYSTEM) con dos disparadores:
+- **Al arranque**: muestra inmediata en cada boot.
+- **Cada 5 min** (configurable con `-IntervalMinutes`) con duración `P9999D`
+  (~27 años). PS 5.1 no permite repetición en triggers diarios, por eso se usa
+  `Once` + repetición + `StartWhenAvailable`. ⚠️ No usar `[TimeSpan]::MaxValue`
+  como duración: serializa a `P99999999DT23H59M59S` y `Register-ScheduledTask`
+  lo rechaza con `HRESULT 0x80041318`.
+
+> La tarea apunta al script por **ruta**, no lo embebe: si actualizas
+> `monitor-gcusers-v2.ps1`, solo re-copia el archivo y la próxima muestra ya usa
+> la versión nueva. Si cambias la cabecera del CSV, borra el CSV del día para
+> que se regenere con la cabecera nueva.
+
+### Datos capturados por muestra
+
+| Campo | Descripción |
+|-------|-------------|
+| `timestamp` | Fecha y hora local |
+| `cpu_pct` | CPU total del sistema |
+| `mem_libre_mb` / `mem_total_mb` | Memoria física libre y total (MB) |
+| `commit_pct` | Uso del commit/pagefile |
+| `disk_read_s` / `disk_write_s` | Latencia de disco (Avg. Disk sec/Read, /Write) |
+| `sessions_rdp` | Sesiones RDP `activas/totales` (no es un límite: `total` incluye sesiones de sistema como `console`/`services`) |
+| `usuarios` | Nombres de los usuarios con sesión `Active` (separador "pipe") |
+| `top5_cpu` | Top-5 procesos por CPU (nombre:% con separador "pipe") |
+| `top5_ram` | Top-5 procesos por RAM (nombre:MB) |
+
+> **Localización:** el script usa clases CIM (`Win32_PerfFormattedData_*`)
+> para CPU, disco y commit en vez de `Get-Counter`, porque los caminos de
+> contador en inglés (`\Processor(_Total)\% Processor Time`, etc.) no resuelven
+> en instalaciones de Windows Server en español.
+
+Los CSV quedan en `<carpeta del script>\monitor\monitor-YYYYMMDD.csv` (p. ej.
+`C:\Scripts\monitor\monitor-20260914.csv`) con **retención de 30 días**.
+
+### Uso / revisión
+
+```powershell
+# Muestra manual
+schtasks /Run /TN GCMonitor
+
+# Verificar tarea / última muestra
+schtasks /Query /TN GCMonitor /V /FO LIST
+Get-Content (Join-Path C:\Scripts monitor\monitor-*.csv) | Select-Object -Last 3
+```
+
+> Al abrir el CSV en Excel, el separador de columnas es `;` (compatible con
+> config regional es-CO).
+
 ## Referencias
 
 - [Microsoft - RDS Licensing Troubleshooting](https://learn.microsoft.com/en-us/troubleshoot/windows-server/remote/troubleshoot-rds-licensing-guidance)

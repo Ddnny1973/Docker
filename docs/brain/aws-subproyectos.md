@@ -6,7 +6,7 @@ repo: DOCKER
 tags: [aws, lambda, sam, cloudformation, snapshots, windows]
 related:
   - "[[_index]]"
-updated: 2026-08-07
+updated: 2026-09-14
 owner: dueño del repo
 ---
 
@@ -54,6 +54,20 @@ Gotchas (conocimiento duro, ver commits recientes):
   hay tope de resets; el borrado requiere
   SYSTEM porque la clave bloquea a Administrators, `takeown`/`icacls` no sirven
   para registro).
+- `monitor-gcusers-v2.ps1` + `install-gcusers-monitor.ps1` — monitoreo interno
+  del servidor sin CloudWatch: la tarea `GCMonitor` (SYSTEM) muestrea cada
+  5 min (al arranque + repetición `Once` de duración `P9999D`; PS 5.1 no permite
+  repetición sobre triggers diarios, y `[TimeSpan]::MaxValue` falla en
+  Register con 0x80041318) y agrega una línea a `monitor\monitor-YYYYMMDD.csv`
+  (un archivo por día, retención 30 días) con CPU, memoria/commit, latencia de
+  disco, sesiones RDP (`activas/totales` + usuarios activos en `usuarios`) y
+  top-5 procesos por CPU/RAM. Usa clases CIM
+  (`Win32_PerfFormattedData_*`) en vez de `Get-Counter`, porque los nombres de
+  contador en inglés no resuelven en Windows Server en español. Instalado en
+  `C:\scripts\Monitoreo\` el 2026-09-14 para capturar la semana antes de
+  resolver el reporte de lentitud de gcusers-v2 (revisión el fin de semana).
+  ⚠️ Pendiente confirmar que las muestras posteriores al fix CIM traen
+  `cpu_pct`/`disk_*` con valores (las de madrugada salieron vacías).
 - Docs de arquitectura y planes de migración en `gc-wordoffice-infra/docs/`.
 - Este repo no contiene credenciales AWS; los stacks se actualizan con credenciales
   temporales (los scripts lo documentan).

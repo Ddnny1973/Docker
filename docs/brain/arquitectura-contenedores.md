@@ -7,7 +7,7 @@ tags: [docker, docker-compose, odoo, n8n, puertos]
 related:
   - "[[_index]]"
   - "[[deploy-y-sync]]"
-updated: 2026-08-20
+updated: 2026-09-18
 owner: dueño del repo
 ---
 
@@ -28,8 +28,15 @@ Inventario por proyecto (ver `INFRAESTRUCTURA.md` para estado actualizado):
 - `32` — stack n8n + IA (n8n, redis, postgres:12, pgvector pg14, ocr,
   transcription/whisper, pdf2img, 4x `whatsapp-web-api`).
 - `39` — Metabase. `16` — Odoo 13 (CANCELADO).
-- `33` (wetty), `34` (code-server), `40` (OpenClaw gateway) — **inactivos**;
-  solo están definidos, no corriendo.
+- `33` (wetty), `34` (code-server) — **inactivos**; solo están definidos,
+  no corriendo.
+- `40` — **OpenClaw (asistente personal 24/7)**: gateway + cli. Imagen pinnada
+  `ghcr.io/openclaw/openclaw:2026.9.4` (nunca `:latest`), puerto host `8040`
+  **solo loopback** + SSH tunnel (sin vhost; Telegram por long-polling saliente).
+  Endurecido por decisión: **sin socket Docker** (compensación: rootfs read-only,
+  `cap_drop: ALL`, `no-new-privileges`, tmpfs, política de tools restrictiva).
+  Secretos en `40/.env` **no versionado** (excepción a la norma de credenciales
+  en claro — ver [[credenciales-convenciones]]). Runbook: `40/README.md`.
 
 ## Convención de puertos
 

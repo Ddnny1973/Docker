@@ -1,23 +1,117 @@
+# =============================================================================
+# Proyecto 40 — OpenClaw (asistente personal 24/7).
+# El contenido anterior de esta carpeta (openclaw.json/openclaw.md) NUNCA se
+# desplegó y fue eliminado. Este compose sustituye esa configuración.
+#
+# Decisiones de seguridad (validadas con el dueño del repo):
+#   - Imagen oficial pinnada: ghcr.io/openclaw/openclaw:2026.9.4 (nunca :latest)
+#   - SIN montar /var/run/docker.sock (no hay sandbox de contenedores).
+#     El aislamiento del agente se compensa con rootfs read-only, cap_drop ALL,
+#     no-new-privileges, tmpfs y una política de tools restrictiva.
+#   - Acceso externo SOLO por loopback (127.0.0.1:8040) + SSH tunnel.
+#     Telegram funciona por long-polling saliente: no necesita puertos entrantes.
+#   - Secretos en /data/odoo/40/.env (chmod 600), NO versionados.
+# =============================================================================
+
 services:
   openclaw-gateway:
-    image: ghcr.io/openclaw/openclaw:latest
-    container_name: openclaw-gateway
-    restart: always
-    ports:
-      - "8040:18789" # Puerto para tu Proxy Inverso (Nginx)
+    image: ghcr.io/openclaw/openclaw:2026.9.4
+    container_name: openclaw-40
+    restart: unless-stopped
+    init: true
+    user: "1000:1000"
+    env_file:
+      - path: .env
+        required: true
     environment:
-      - OPENCLAW_SANDBOX=1 # ACTIVA EL AISLAMIENTO TOTAL
-      - OPENCLAW_GATEWAY_BIND=lan
-      - NODE_ENV=production
+      HOME: /home/node
+      OPENCLAW_HOME: /home/node
+      TERM: xterm-256color
+      OPENCLAW_STATE_DIR: /home/node/.openclaw
+      OPENCLAW_CONFIG_PATH: /home/node/.openclaw/openclaw.json
+      OPENCLAW_CONFIG_DIR: /home/node/.openclaw
+      OPENCLAW_WORKSPACE_DIR: /home/node/.openclaw/workspace
+      OPENCLAW_GATEWAY_PORT: "18789"
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
+      # "lan" dentro del contenedor: el acceso externo se restringe en el host
+      # bindeando el puerto publicado solo a 127.0.0.1.
+      OPENCLAW_GATEWAY_BIND: lan
+      TZ: ${OPENCLAW_TZ:-UTC}
+    volumes:
+      # Estado + credenciales del agente (openclaw.json, SQLite, sesiones). TRATAR COMO CREDENCIALES.
+      - ./config:/home/node/.openclaw
+      # Área de trabajo del agente.
+      - ./workspace:/home/node/.openclaw/workspace
+      # Claves del auth-profile (OAuth Google futuro, refresh tokens).
+      - ./secrets:/home/node/.config/openclaw
+    ports:
+      # Solo loopback en el host (SSH tunnel desde la máquina del dueño).
+      - "127.0.0.1:8040:18789"
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /home/node/.cache
+      - /home/node/.npm
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "node", "dist/docker-healthcheck.js"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  openclaw-cli:
+    image: ghcr.io/openclaw/openclaw:2026.9.4
+    container_name: openclaw-40-cli
+    restart: "no"
+    init: true
+    user: "1000:1000"
+    # Comparte el namespace de red del gateway (oficial).
+    network_mode: "service:openclaw-gateway"
+    env_file:
+      - path: .env
+        required: true
+    environment:
+      HOME: /home/node
+      OPENCLAW_HOME: /home/node
+      TERM: xterm-256color
+      OPENCLAW_STATE_DIR: /home/node/.openclaw
+      OPENCLAW_CONFIG_PATH: /home/node/.openclaw/openclaw.json
+      OPENCLAW_CONFIG_DIR: /home/node/.openclaw
+      OPENCLAW_WORKSPACE_DIR: /home/node/.openclaw/workspace
+      OPENCLAW_GATEWAY_PORT: "18789"
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
+      BROWSER: echo
+      TZ: ${OPENCLAW_TZ:-UTC}
     volumes:
       - ./config:/home/node/.openclaw
       - ./workspace:/home/node/.openclaw/workspace
-      # MUY IMPORTANTE: El sandbox necesita el socket de Docker para
-      # crear los contenedores temporales aislados del agente.
-      - /var/run/docker.sock:/var/run/docker.sock 
-    networks:
-      - openclaw_isolated
-
-networks:
-  openclaw_isolated:
-    name: openclaw_net
+      - ./secrets:/home/node/.config/openclaw
+    stdin_open: true
+    tty: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /home/node/.cache
+      - /home/node/.npm
+    entrypoint: ["node", "dist/index.js"]
+    depends_on:
+      - openclaw-gateway

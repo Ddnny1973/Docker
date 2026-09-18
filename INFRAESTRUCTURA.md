@@ -26,7 +26,7 @@ La infraestructura se distribuye en 5 servidores Linux (acceso `root`):
 | **Docker - New - 01** (`46.224.72.175` / `10.0.0.4`) | Contenedores | Por confirmar (migración a Alma completada) |
 | **Docker - New - 02** (`77.42.26.60` / `10.0.0.5`) | Contenedores | Vacío — desmantelable |
 | **Docker - New - 03** (`37.27.190.155` / `10.0.0.2`) | Contenedores | Vacío — desmantelable |
-| **Docker - Alma - 16GB** (`2.29.11.73` / `10.0.0.6`) | Contenedores | **✅ CONSOLIDADO:** `29`, `30`, `32` (n8n + IA), `35`, `36`, `37`, `41`, `42`, `43`, `pgadmin4` |
+| **Docker - Alma - 16GB** (`2.29.11.73` / `10.0.0.6`) | Contenedores | **✅ CONSOLIDADO:** `29`, `30`, `32` (n8n + IA), `35`, `36`, `37`, `40`, `41`, `42`, `43`, `pgadmin4` |
 
 ---
 
@@ -66,7 +66,6 @@ La infraestructura se distribuye en 5 servidores Linux (acceso `root`):
 * **`16` (Odoo 13):** CANCELADO.
 * **`33` (Wetty):** Terminal en navegador (Puerto 8033).
 * **`34` (VSCode Web):** IDE online (Puerto 8034).
-* **`40` (Openclaw-gateway):** Gateway para openclaw (Puerto 8040).
 
 ### Proyectos Activos (Junio 2026)
 
@@ -77,6 +76,7 @@ La infraestructura se distribuye en 5 servidores Linux (acceso `root`):
 | **`39` (Metabase)** | BI / consultas | Alto tránsito de red |
 | **`35`–`38`, `42` (Odoo)** | Instancias Odoo | Puertos `80NN`/`90NN` |
 | **`41` (Prospectum)** | Odoo 18 — `prospectum.ai-mindnovation.com` | Puerto `8041`/`9041`, longpoll `8079` |
+| **`40` (OpenClaw)** | Asistente personal 24/7 (Telegram) | Puerto `8040` **solo loopback** (SSH tunnel), imagen `ghcr.io/openclaw/openclaw:2026.9.4`, sin vhost. Runbook: `40/README.md` |
 
 ---
 

@@ -42,3 +42,12 @@ monitor_resources.sh
 */config/
 *.save
 *.bak
+
+# ============================================
+# 40 — OpenClaw (runtime del agente; los datos SON credenciales)
+# ============================================
+40/workspace/
+40/secrets/
+40/backups/
+# .env* ya está ignorado arriba; permitimos versionar SOLO la plantilla:
+!40/.env.example

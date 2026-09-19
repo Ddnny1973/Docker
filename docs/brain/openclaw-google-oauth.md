@@ -18,9 +18,23 @@ owner: dueño del repo
 - **Estado:** instalado y habilitado; OAuth todavía pendiente.
 - **Ubicación en el servidor:** `/home/node/.openclaw/extensions/tangleclaw-google-oauth`.
 - **Proyecto:** `40/`, imagen OpenClaw `2026.9.4`.
+- **OpenRouter:** API key personal actualizada correctamente en OpenClaw; el secreto no se documenta ni se versiona.
 
 El plugin utiliza directamente las APIs oficiales de Google mediante `googleapis`.
 La extensión y sus tokens viven en el estado persistente del servidor; no forman parte del checkout versionado de este repo.
+
+## Credencial OpenRouter
+
+La API key se actualizó en el Gateway mediante el flujo oficial de onboarding:
+
+```bash
+docker compose exec openclaw-gateway openclaw onboard \
+   --auth-choice apiKey \
+   --token-provider openrouter \
+   --token "TU_NUEVA_API_KEY_PERSONAL"
+```
+
+El valor mostrado es únicamente un placeholder. La API key real permanece en el estado persistente del servidor y no debe escribirse en este cerebro, en `.env`, en commits ni en mensajes de diagnóstico.
 
 ## Scopes actuales
 

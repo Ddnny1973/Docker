@@ -10,10 +10,10 @@ related:
   - "[[backups-retencion]]"
   - "[[aws-subproyectos]]"
   - "[[credenciales-convenciones]]"
+  - "[[openclaw-google-oauth]]"
 updated: 2026-09-19
 owner: dueño del repo
 ---
-
 # DOCKER — Cerebro digital
 
 ## Qué es este repo
@@ -88,6 +88,8 @@ Rutas del servidor (hardcodeadas en scripts, no "arreglarlas"):
 - **40 (OpenClaw):**
   - [README del proyecto](../../40/README.md) — runbook: primer arranque headless,
     telegram allowlist, operación, actualizar/rollback y validaciones de seguridad.
+  - [Google Workspace OAuth](openclaw-google-oauth.md) — plugin instalado,
+    scopes actuales en solo lectura, backup/rollback y regla para ampliar permisos.
 - **41 (Prospectum):**
   - [Arquitectura del proyecto](../../41/ARQUITECTURA.md) — diagrama, puertos, rutas y comandos.
   - [Instrucciones de conexión](../../41/INSTRUCCIONES_CONEXION.md) — cómo conectarse al servidor y configurar el versionamiento del código.

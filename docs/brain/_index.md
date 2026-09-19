@@ -10,7 +10,7 @@ related:
   - "[[backups-retencion]]"
   - "[[aws-subproyectos]]"
   - "[[credenciales-convenciones]]"
-updated: 2026-09-18
+updated: 2026-09-19
 owner: dueño del repo
 ---
 
@@ -65,7 +65,7 @@ Rutas del servidor (hardcodeadas en scripts, no "arreglarlas"):
 | 41 | `41/` | Prospectum (Odoo 18) | 8041 | ✅ Healthy | ✅ prospectum.ai-mindnovation.com |
 | 42 | `42/` | Showcase (Odoo 18) | 8042 | ✅ Healthy | ✅ showcase.ai-mindnovation.com |
 | 43 | `43/` | Trading (FastAPI) | 8043 | ✅ Healthy | ✅ trading.gestorconsultoria.com.co |
-| 40 | `40/` | OpenClaw (asistente personal) | 8040 (loopback) | 🚧 Pendiente validar | No hay vhost (Telegram) |
+| 40 | `40/` | OpenClaw (asistente personal) | 8040 (loopback) | ✅ Validado (Telegram operativo) | No hay vhost (Telegram) |
 | pgadmin4 | `pgadmin4/` | pgAdmin4 | 8010 | ⚠️ Unhealthy | ✅ pgadmin.gestorconsultoria.com.co |
 
 ### Contenedores de Proyecto 32 (n8n + IA)

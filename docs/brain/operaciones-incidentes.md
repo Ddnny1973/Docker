@@ -5,13 +5,58 @@ tags: [operaciones, incidentes, troubleshooting, docker, migracion]
 related:
   - "[[arquitectura-servidores]]"
   - "[[deploy-y-sync]]"
-updated: 2026-08-21
+updated: 2026-09-19
 owner: dueño del repo
 ---
 
 # Operaciones — Registro de Incidentes
 
 Documento para registrar problemas operacionales, causas raíz y resoluciones en la infraestructura de Docker.
+
+---
+
+## 2026-09-19 — Proyecto 40 (OpenClaw): modelOverride de sesión Telegram apuntaba a modelo retirado
+
+### Contexto
+El agente `main` funcionaba bien vía CLI (`openclaw agent exec "..."` con `openrouter/free`), pero el bot de Telegram (`@ddnny73_bot`) respondía siempre: *"⚠️ The configured model is unavailable from the provider..."*.
+
+### Causa raíz
+Durante el onboarding inicial el dueño eligió "gemini free" en el picker de Telegram. Esa elección quedó persistida como `modelOverride: "google/gemini-2.0-flash-exp:free"` **a nivel de sesión** (no en `openclaw.json`), en la sesión `agent:main:main`. Ese modelo fue retirado de OpenRouter (`404 No endpoints found`). `agents.defaults.model` en `openclaw.json` siempre estuvo correcto (`openrouter/free`) — por eso el CLI (que no usa esa sesión) funcionaba.
+
+**Dato clave:** el override de modelo elegido vía picker de un canal (Telegram/TUI) es **session-scoped**, no queda en `openclaw.json`. No hay comando oficial para limpiarlo:
+- `sessions delete "agent:main:main"` → bloqueado (no se puede borrar la sesión main).
+- `agent --model openrouter/free ... --deliver` → solo fuerza un run puntual, NO limpia el override persistente.
+- `models set openrouter/free` → solo reafirma `agents.defaults.model`, no toca el override de sesión.
+
+### Ubicación exacta del dato
+SQLite en `config/agents/main/agent/openclaw-agent.sqlite` (montado en `/home/node/.openclaw/...` dentro del contenedor), tabla `session_nodes`, columna `entry_json` (JSON), fila `session_key='agent:main:main'`. Las claves relevantes dentro del JSON: `modelOverride`, `providerOverride`, `modelOverrideSource`, `modelOverrideRouteResolution`.
+
+### Solución aplicada
+1. `docker compose stop openclaw-gateway` (evitar carrera de escritura).
+2. Editar la fila directamente con un script python3 corrido vía `docker compose run --rm --entrypoint python3 openclaw-cli -c "..."` (no hay `sqlite3` CLI en la imagen): leer `entry_json`, `json.loads`, hacer `.pop()` de las 4 claves de override, actualizar `updatedAt`, `UPDATE ... SET entry_json=?`, commit.
+3. `docker compose up -d openclaw-gateway`.
+
+### Incidente secundario: crash-loop post-restart
+Tras el `stop`/edición/`up`, el gateway entró en crash-loop con error repetido:
+```
+[openclaw] Reason: Unable to create fallback OpenClaw temp dir: /home/node/.cache/openclaw-1000
+```
+No relacionado con la edición SQLite — parece un problema conocido de recreación de los mounts `tmpfs` (`/home/node/.cache`, `/tmp`, `/home/node/.npm`) tras un `stop`+`up` simple. **Fix:** forzar recreación completa del contenedor en vez de solo reiniciarlo:
+```bash
+docker compose up -d --force-recreate openclaw-gateway
+```
+Con eso el gateway volvió a `Up (healthy)` normalmente.
+
+### Validación
+- `docker compose run --rm openclaw-cli sessions --agent main --json` ya no muestra `modelOverride`/`providerOverride` en la sesión `agent:main:main`.
+- Mensaje real vía Telegram respondió correctamente usando `openrouter/free`, sin el error 404.
+- Latencia de varios segundos a ~1 minuto en responder es esperada (modelo gratuito compartido de OpenRouter), no es un bug.
+
+### Lecciones aprendidas
+- El override de modelo elegido por un canal (picker de Telegram/TUI) es session-scoped y persiste en SQLite, no en `openclaw.json`; no hay comando CLI oficial para limpiarlo — requiere edición directa de `session_nodes.entry_json`.
+- Antes de editar el SQLite en caliente: `docker compose stop` primero.
+- Tras editar el SQLite y volver a levantar el gateway, si queda en crash-loop por temp dir, usar `--force-recreate` en vez de solo `up -d` (los mounts `tmpfs` pueden no regenerarse limpios con un simple restart).
+- No hay backup automático del `.sqlite` antes de editarlo — a futuro considerar copiar el archivo antes de un `UPDATE` directo.
 
 ---
 

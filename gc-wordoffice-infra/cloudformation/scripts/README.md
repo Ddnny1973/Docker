@@ -149,14 +149,20 @@ Esto crea la tarea `GCMonitor` (SYSTEM) con dos disparadores:
 | `commit_pct` | Uso del commit/pagefile |
 | `disk_read_s` / `disk_write_s` | Latencia de disco (Avg. Disk sec/Read, /Write) |
 | `sessions_rdp` | Sesiones RDP `activas/totales` (no es un límite: `total` incluye sesiones de sistema como `console`/`services`) |
+| `ses_disc` | Sesiones desconectadas (`Disc`) — clave para medir el efecto de la limpieza |
 | `usuarios` | Nombres de los usuarios con sesión `Active` (separador "pipe") |
 | `top5_cpu` | Top-5 procesos por CPU (nombre:% con separador "pipe") |
 | `top5_ram` | Top-5 procesos por RAM (nombre:MB) |
 
-> **Localización:** el script usa clases CIM (`Win32_PerfFormattedData_*`)
-> para CPU, disco y commit en vez de `Get-Counter`, porque los caminos de
-> contador en inglés (`\Processor(_Total)\% Processor Time`, etc.) no resuelven
-> en instalaciones de Windows Server en español.
+> **Localización / contadores rotos:** el script usa clases CIM
+> (`Win32_PerfFormattedData_*`) para CPU, disco y commit en vez de `Get-Counter`,
+> porque los caminos de contador en inglés (`\Processor(_Total)\% Processor
+> Time`, etc.) no resuelven en instalaciones de Windows Server en español. Si los
+> contadores del SO están rotos (esas clases fallan con `Invalid class`), el
+> monitor estima la CPU total y el top-5 por diferencia del tiempo de proceso
+> entre muestras consecutivas (`monitor-state.json`, promedio del intervalo,
+> desde la 2ª muestra) para que nunca queden columnas vacías. `Get-CimInstance`
+> funciona normalmente para memoria (`Win32_OperatingSystem`).
 
 Los CSV quedan en `<carpeta del script>\monitor\monitor-YYYYMMDD.csv` (p. ej.
 `C:\Scripts\monitor\monitor-20260914.csv`) con **retención de 30 días**.
@@ -175,6 +181,40 @@ Get-Content (Join-Path C:\Scripts monitor\monitor-*.csv) | Select-Object -Last 3
 > Al abrir el CSV en Excel, el separador de columnas es `;` (compatible con
 > config regional es-CO).
 
+## Limpieza automática de sesiones RDS desconectadas
+
+Cierra las sesiones RDP en estado **Disc** (desconectadas) que llevan más de un
+umbral de inactividad, liberando la RAM que ocupan sin afectar a las sesiones
+activas ni a la consola. Esta es la primera acción para aliviar la presión de
+memoria detectada en el monitoreo antes de decidir un cambio de capacidad.
+
+### Instalación (una sola vez)
+
+1. Copia los dos scripts al servidor (p. ej. a `C:\Scripts\`):
+   - `limpiar-sesiones-desconectadas.ps1`
+   - `install-limpieza-sesiones.ps1`
+2. En PowerShell **como Administrador**:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File C:\Scripts\install-limpieza-sesiones.ps1
+   ```
+
+Esto crea la tarea `GCLimpiezaSesiones` (SYSTEM) con disparadores al arranque y
+cada 5 min (`P9999D`, mismo patrón que el monitor). Solo toca sesiones
+`rdp-tcp*` en estado `Disc` con más de `-IdleMinutes` (default **30**) de
+inactividad. Antes de instalarlo puedes simular sin cerrar nada:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\limpiar-sesiones-desconectadas.ps1 -WhatIf
+```
+
+### Media de efecto
+
+El monitor (columna `ses_disc`) registra las desconectadas antes y después de
+activar la limpieza, junto con la memoria libre — se valida con datos si el
+alivio es suficiente o hace falta más capacidad.
+
+Log: `<carpeta del script>\log\limpiar-sesiones-YYYYMMDD.log`.
+
 ## Referencias
 
 - [Microsoft - RDS Licensing Troubleshooting](https://learn.microsoft.com/en-us/troubleshoot/windows-server/remote/troubleshoot-rds-licensing-guidance)
@@ -183,6 +223,6 @@ Get-Content (Join-Path C:\Scripts monitor\monitor-*.csv) | Select-Object -Last 3
 ---
 
 **Autor:** Grupo Contable
-**Versión:** 2.0
-**Última actualización:** Agosto 2026
+**Versión:** 2.1
+**Última actualización:** Septiembre 2026
 **Servidor:** gcusers-v2 (Windows Server 2025)

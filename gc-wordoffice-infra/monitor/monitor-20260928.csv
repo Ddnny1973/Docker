@@ -1,0 +1,5 @@
+﻿timestamp;cpu_pct;mem_libre_mb;mem_total_mb;commit_pct;disk_read_s;disk_write_s;sessions_rdp;usuarios;top5_cpu;top5_ram
+2026-09-28 03:09:00;;14202;16220;;;;0/4;"";"";"MsMpEng:774MB|powershell:84MB|powershell:73MB|Registry:64MB|LogonUI:62MB"
+2026-09-28 03:10:02;;14560;16220;;;;0/4;"";"";"MsMpEng:269MB|WoServiceControl:98MB|powershell:84MB|Registry:64MB|LogonUI:61MB"
+2026-09-28 03:15:01;;14214;16220;;;;0/4;"";"";"MsMpEng:283MB|svchost:99MB|WoServiceControl:99MB|powershell:91MB|LogonUI:60MB"
+2026-09-28 03:20:02;;14202;16220;;;;0/4;"";"";"MsMpEng:295MB|WoServiceControl:99MB|powershell:84MB|svchost:60MB|LogonUI:60MB"

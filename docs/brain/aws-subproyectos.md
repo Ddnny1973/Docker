@@ -6,7 +6,7 @@ repo: DOCKER
 tags: [aws, lambda, sam, cloudformation, snapshots, windows]
 related:
   - "[[_index]]"
-updated: 2026-09-14
+updated: 2026-09-28
 owner: dueño del repo
 ---
 
@@ -60,14 +60,34 @@ Gotchas (conocimiento duro, ver commits recientes):
   repetición sobre triggers diarios, y `[TimeSpan]::MaxValue` falla en
   Register con 0x80041318) y agrega una línea a `monitor\monitor-YYYYMMDD.csv`
   (un archivo por día, retención 30 días) con CPU, memoria/commit, latencia de
-  disco, sesiones RDP (`activas/totales` + usuarios activos en `usuarios`) y
-  top-5 procesos por CPU/RAM. Usa clases CIM
+  disco, sesiones RDP (`activas/totales` + desconectadas `ses_disc` + usuarios
+  activos `usuarios`) y top-5 procesos por CPU/RAM. Usa clases CIM
   (`Win32_PerfFormattedData_*`) en vez de `Get-Counter`, porque los nombres de
-  contador en inglés no resuelven en Windows Server en español. Instalado en
-  `C:\scripts\Monitoreo\` el 2026-09-14 para capturar la semana antes de
-  resolver el reporte de lentitud de gcusers-v2 (revisión el fin de semana).
-  ⚠️ Pendiente confirmar que las muestras posteriores al fix CIM traen
-  `cpu_pct`/`disk_*` con valores (las de madrugada salieron vacías).
+  contador en inglés no resuelven en Windows Server en español.
+- `limpiar-sesiones-desconectadas.ps1` + `install-limpieza-sesiones.ps1` —
+  libera RAM cerrando con `logoff` las sesiones RDP (`rdp-tcp*`) en estado
+  `Disc` con más de 30 min de inactividad (tarea `GCLimpiezaSesiones`, SYSTEM,
+  al arranque + cada 5 min). Primera acción para aliviar la presión de memoria
+  detectada antes de decidir un aumento de capacidad; el monitor (`ses_disc`)
+  mide el efecto y los logs van a `log\limpiar-sesiones-YYYYMMDD.log`.
+
+### Hallazgo del monitoreo 14–28 sep (baseline)
+
+- **Memoria**: días hábiles el uso llegó a **11–13.1 GB de 16 GB** (quedan solo
+  ~3 GB) al mediodía/tarde; 8–10 sesiones activas y varias desconectadas que
+  seguían consumiendo RAM (varios `explorer` en el top). Sábados ~7 GB.
+- **CPU/disco**: NO medidos en el baseline — el servidor tenía los **contadores
+  de rendimiento rotos** (todas las clases `Win32_PerfFormattedData_*` y
+  `Get-Counter` fallan con "Invalid class"), no era un tema de idioma. Se
+  reparó con `lodctr /R` + `winmgmt /resyncperf` (2026-09-28) y las columnas
+  recuperaron valores. Además, el monitor ahora tiene un fallback que estima la
+  CPU por diferencia de tiempo de proceso entre muestras
+  (`monitor-state.json`, desde la 2ª muestra) para que nunca queden vacías en
+  silencio si los contadores vuelven a romperse.
+- Decisión pendiente tras una semana con limpieza activa: ¿basta con ella o se
+  aumenta capacidad (memoria)? Soporte: Excel consolidado en
+  `gc-wordoffice-infra\monitor\monitoreo-gcusers-v2-consolidado.xlsx`.
+- Instalado en `C:\scripts\Monitoreo\` el 2026-09-14.
 - Docs de arquitectura y planes de migración en `gc-wordoffice-infra/docs/`.
 - Este repo no contiene credenciales AWS; los stacks se actualizan con credenciales
   temporales (los scripts lo documentan).

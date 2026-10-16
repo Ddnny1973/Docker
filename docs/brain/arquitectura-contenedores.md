@@ -7,7 +7,7 @@ tags: [docker, docker-compose, odoo, n8n, puertos]
 related:
   - "[[_index]]"
   - "[[deploy-y-sync]]"
-updated: 2026-09-18
+updated: 2026-10-16
 owner: dueño del repo
 ---
 
@@ -31,12 +31,14 @@ Inventario por proyecto (ver `INFRAESTRUCTURA.md` para estado actualizado):
 - `33` (wetty), `34` (code-server) — **inactivos**; solo están definidos,
   no corriendo.
 - `40` — **OpenClaw (asistente personal 24/7)**: gateway + cli. Imagen pinnada
-  `ghcr.io/openclaw/openclaw:2026.9.4` (nunca `:latest`), puerto host `8040`
+  `ghcr.io/openclaw/openclaw:2026.10.4` (nunca `:latest`), puerto host `8040`
   **solo loopback** + SSH tunnel (sin vhost; Telegram por long-polling saliente).
   Endurecido por decisión: **sin socket Docker** (compensación: rootfs read-only,
   `cap_drop: ALL`, `no-new-privileges`, tmpfs, política de tools restrictiva).
   Secretos en `40/.env` **no versionado** (excepción a la norma de credenciales
   en claro — ver [[credenciales-convenciones]]). Runbook: `40/README.md`.
+  Consume el **MCP remoto de Gmail** del gateway de n8n
+  (`mcp.servers.gmail` en `config/openclaw.json`, token `GWP_MCP_TOKEN` en `.env`).
 
 ## Convención de puertos
 

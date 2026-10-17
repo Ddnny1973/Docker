@@ -71,15 +71,23 @@ Levantar el gateway y verificar:
 ```bash
 docker compose up -d openclaw-gateway
 docker compose ps
-docker compose run --rm openclaw-cli doctor --json
+docker compose exec openclaw-gateway node dist/index.js doctor --json
 curl -fsS http://127.0.0.1:8040/healthz     # solo alcanzable desde el servidor
 ```
+
+> **Regla CLI:** los comandos que leen el *estado* del gateway (`doctor`,
+> `status`, `probe`, `mcp login`) deben correr **dentro** del gateway con
+> `docker compose exec openclaw-gateway node dist/index.js <cmd>`. Con
+> `docker compose run --rm openclaw-cli` fallan con `GatewayLockNamespaceError`
+> (contenedor aparte = otro PID namespace, no puede verificar la propiedad del
+> lock). Los que solo tocan config (`config set`, `mcp list/set/unset`) sí
+> funcionan desde el contenedor `openclaw-cli`.
 
 ## Operación diaria
 
 | Acción | Comando |
 |---|---|
-| Estado | `docker compose ps` ; `docker compose run --rm openclaw-cli doctor --json` |
+| Estado | `docker compose ps` ; `docker compose exec openclaw-gateway node dist/index.js doctor --json` |
 | Logs | `docker compose logs -f --tail 100 openclaw-gateway` (rotación 10m×5) |
 | Parar | `docker compose stop` (conserva datos) |
 | Reanudar | `docker compose up -d openclaw-gateway` |
@@ -121,8 +129,11 @@ Aplicar (vía Control UI `/settings/mcp` por el túnel SSH, o editando
 
 ```bash
 docker compose restart openclaw-gateway
-docker compose run --rm openclaw-cli mcp list
-docker compose run --rm openclaw-cli mcp doctor gmail --probe
+# OJO: usar `exec` DENTRO del gateway; `docker compose run --rm openclaw-cli`
+# falla con GatewayLockNamespaceError (contenedor aparte = otro PID namespace,
+# no puede leer el state compartido lockeado por el gateway).
+docker compose exec openclaw-gateway node dist/index.js mcp list
+docker compose exec openclaw-gateway node dist/index.js mcp doctor gmail --probe
 ```
 
 > Nota: la nota de "Fase 2" sobre el binario `gog` aplica solo a la
@@ -136,7 +147,7 @@ Las versiones de imagen son inmutables (etiqueta = pin). Nunca usar `:latest`.
 # Actualizar: cambiar el tag EN ESTE COMPOSE al nuevo pin estable (ej. 2026.x.y),
 cd /data/odoo/40 && docker compose pull openclaw-gateway openclaw-cli
 docker compose up -d                                  # recrea con el pin nuevo
-docker compose run --rm openclaw-cli doctor --json    # validar
+docker compose exec openclaw-gateway node dist/index.js doctor --json    # validar
 ```
 
 Rollback = `git checkout` del compose anterior (o editar el tag) + `docker compose up -d`.

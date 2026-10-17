@@ -7,7 +7,7 @@ tags: [docker, docker-compose, odoo, n8n, puertos]
 related:
   - "[[_index]]"
   - "[[deploy-y-sync]]"
-updated: 2026-10-16
+updated: 2026-10-17
 owner: dueño del repo
 ---
 
@@ -49,7 +49,13 @@ Inventario por proyecto (ver `INFRAESTRUCTURA.md` para estado actualizado):
   `transcription`, `pdf2img` usan 5001–5003.
 - **Longpoll de Odoo 18**: el puerto host del longpolling (contenedor 8072)
   **NO sigue fórmula** — es distinto por instancia y hay que mirar el compose:
-  `36`→8076, `37`→8077, `38`→8078, `41`→8079, `42`→8090.
+  `35`→8072, `36`→8076, `37`→8077, `38`→8078, `41`→8079, `42`→8090.
+- Otros puertos: `pgadmin4`→8010, `33` (wetty)→8033, `34` (code-server)→8034,
+  `16` expone dos Postgres (9016 y 9017). El mapa dominio → puerto está en
+  [[nginx-vhosts]].
+- Imágenes sin versión fija: `39` usa `metabase/metabase:latest`, `33` usa
+  `wettyoss/wetty:latest` y `32` usa `n8nio/n8n` sin tag (ver
+  [[auditoria-repo-2026-10]]).
 
 ## Patrón de instancias Odoo
 

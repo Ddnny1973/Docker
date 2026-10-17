@@ -10,7 +10,9 @@ related:
   - "[[backups-retencion]]"
   - "[[aws-subproyectos]]"
   - "[[credenciales-convenciones]]"
-updated: 2026-09-19
+  - "[[nginx-vhosts]]"
+  - "[[auditoria-repo-2026-10]]"
+updated: 2026-10-17
 owner: dueño del repo
 ---
 
@@ -34,6 +36,10 @@ Rutas del servidor (hardcodeadas en scripts, no "arreglarlas"):
 ## Mapa de contenido
 
 - [Arquitectura de servidores](arquitectura-servidores.md) — diagrama de la infraestructura: Bastion (nginx) + 4 nodos Docker, flujo de peticiones, convención de puertos.
+- [[nginx-vhosts]] — dominio → nodo:puerto de cada vhost, cuáles apuntan a nodos
+  antiguos y restos duplicados (`nginex/`, `.bk`).
+- [[auditoria-repo-2026-10]] — **hallazgos de la auditoría completa** (claves `.ppk`
+  versionadas, dos workflows, binarios en git, docs desactualizados) y plan de orden.
 - [[arquitectura-contenedores]] — layout de proyectos numerados, convención de
   puertos `80NN`/`90NN`, patrón Odoo `web` + `db-<NN>`, stack n8n de `32`,
   proyectos inactivos/cancelados.
@@ -65,6 +71,8 @@ Rutas del servidor (hardcodeadas en scripts, no "arreglarlas"):
 | 41 | `41/` | Prospectum (Odoo 18) | 8041 | ✅ Healthy | ✅ prospectum.ai-mindnovation.com |
 | 42 | `42/` | Showcase (Odoo 18) | 8042 | ✅ Healthy | ✅ showcase.ai-mindnovation.com |
 | 43 | `43/` | Trading (FastAPI) | 8043 | ✅ Healthy | ✅ trading.gestorconsultoria.com.co |
+| 38 | `38/` | Gestor (Odoo 18) | 8038 | ❓ Nodo por confirmar | ✅ gc-pruebas (apunta a New-03) |
+| 39 | `39/` | Metabase | 8039 | ❓ Nodo por confirmar | ✅ analytics (apunta a New-01) |
 | 40 | `40/` | OpenClaw (asistente personal) | 8040 (loopback) | ✅ Validado (Telegram operativo) | No hay vhost (Telegram) |
 | pgadmin4 | `pgadmin4/` | pgAdmin4 | 8010 | ⚠️ Unhealthy | ✅ pgadmin.gestorconsultoria.com.co |
 
@@ -81,7 +89,10 @@ Rutas del servidor (hardcodeadas en scripts, no "arreglarlas"):
 ### 🧹 Limpieza Pendiente
 - **Proyectos 29 y 30** (Odoo 16, ambos unhealthy) — considerar eliminar si no se usan.
 - **n8n unhealthy** — revisar logs para diagnosticar.
-- **Docker-New-03** (`10.0.0.2`) — confirmar si está vacío y puede desmantelarse.
+- **Docker-New-03** (`10.0.0.2`) — confirmar si está vacío y puede desmantelarse
+  (varios vhosts aún apuntan allí, ver [[nginx-vhosts]]).
+- Orden del repo (claves `.ppk`, `nginex/`, binarios, `.gitignore`): ver
+  [[auditoria-repo-2026-10]].
 
 ## Documentación por proyecto
 

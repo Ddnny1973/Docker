@@ -76,7 +76,7 @@ La infraestructura se distribuye en 5 servidores Linux (acceso `root`):
 | **`39` (Metabase)** | BI / consultas | Alto tránsito de red |
 | **`35`–`38`, `42` (Odoo)** | Instancias Odoo | Puertos `80NN`/`90NN` |
 | **`41` (Prospectum)** | Odoo 18 — `prospectum.ai-mindnovation.com` | Puerto `8041`/`9041`, longpoll `8079` |
-| **`40` (OpenClaw)** | Asistente personal 24/7 (Telegram) | Puerto `8040` **solo loopback** (SSH tunnel), imagen `ghcr.io/openclaw/openclaw:2026.9.4`, sin vhost. Runbook: `40/README.md` |
+| **`40` (OpenClaw)** | Asistente personal 24/7 (Telegram) | Puerto `8040` **solo loopback** (SSH tunnel), imagen `ghcr.io/openclaw/openclaw:2026.10.4`, sin vhost. Consume MCP de Gmail vía n8n. Runbook: `40/README.md` |
 
 ---
 

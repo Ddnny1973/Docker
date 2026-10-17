@@ -4,7 +4,7 @@
 # desplegó y fue eliminado. Este compose sustituye esa configuración.
 #
 # Decisiones de seguridad (validadas con el dueño del repo):
-#   - Imagen oficial pinnada: ghcr.io/openclaw/openclaw:2026.9.4 (nunca :latest)
+#   - Imagen oficial pinnada: ghcr.io/openclaw/openclaw:2026.10.4 (nunca :latest)
 #   - SIN montar /var/run/docker.sock (no hay sandbox de contenedores).
 #     El aislamiento del agente se compensa con rootfs read-only, cap_drop ALL,
 #     no-new-privileges, tmpfs y una política de tools restrictiva.
@@ -15,7 +15,7 @@
 
 services:
   openclaw-gateway:
-    image: ghcr.io/openclaw/openclaw:2026.9.4
+    image: ghcr.io/openclaw/openclaw:2026.10.4
     container_name: openclaw-40
     restart: unless-stopped
     init: true
@@ -76,7 +76,7 @@ services:
         max-file: "5"
 
   openclaw-cli:
-    image: ghcr.io/openclaw/openclaw:2026.9.4
+    image: ghcr.io/openclaw/openclaw:2026.10.4
     container_name: openclaw-40-cli
     restart: "no"
     init: true

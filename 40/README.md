@@ -8,7 +8,7 @@ Agente personal desplegado como **Docker Compose** en el servidor consolidado de
 
 | Decisión | Elección |
 |---|---|
-| Imagen | `ghcr.io/openclaw/openclaw:2026.9.4` (pin inamovible; nunca `:latest`) |
+| Imagen | `ghcr.io/openclaw/openclaw:2026.10.4` (pin inamovible; nunca `:latest`) |
 | Sandbox contenedor | **NO** — se descarta montar `/var/run/docker.sock`; compensación: rootfs `read_only`, `cap_drop: [ALL]`, `no-new-privileges`, `tmpfs`, política de tools restrictiva |
 | Exposición | Solo `127.0.0.1:8040` (loopback) + SSH tunnel. Telegram = long-polling saliente, sin puertos entrantes |
 | Secretos | `/data/odoo/40/.env` (`chmod 600`), no versionado; credenciales del agente en `config/` (se respaldan como credencial) |
@@ -71,20 +71,73 @@ Levantar el gateway y verificar:
 ```bash
 docker compose up -d openclaw-gateway
 docker compose ps
-docker compose run --rm openclaw-cli doctor --json
+docker compose exec openclaw-gateway node dist/index.js doctor --json
 curl -fsS http://127.0.0.1:8040/healthz     # solo alcanzable desde el servidor
 ```
+
+> **Regla CLI:** los comandos que leen el *estado* del gateway (`doctor`,
+> `status`, `probe`, `mcp login`) deben correr **dentro** del gateway con
+> `docker compose exec openclaw-gateway node dist/index.js <cmd>`. Con
+> `docker compose run --rm openclaw-cli` fallan con `GatewayLockNamespaceError`
+> (contenedor aparte = otro PID namespace, no puede verificar la propiedad del
+> lock). Los que solo tocan config (`config set`, `mcp list/set/unset`) sí
+> funcionan desde el contenedor `openclaw-cli`.
 
 ## Operación diaria
 
 | Acción | Comando |
 |---|---|
-| Estado | `docker compose ps` ; `docker compose run --rm openclaw-cli doctor --json` |
+| Estado | `docker compose ps` ; `docker compose exec openclaw-gateway node dist/index.js doctor --json` |
 | Logs | `docker compose logs -f --tail 100 openclaw-gateway` (rotación 10m×5) |
 | Parar | `docker compose stop` (conserva datos) |
 | Reanudar | `docker compose up -d openclaw-gateway` |
 | Reiniciar gateway | `docker compose restart openclaw-gateway` |
 | SSH tunnel (máquina local) | `ssh -N -L 8040:127.0.0.1:8040 root@2.29.11.73` → Control UI en `http://127.0.0.1:8040` |
+
+## Integración MCP remoto (Gmail — gateway de n8n)
+
+OpenClaw consume el gateway MCP de Google Workspace que expone n8n
+(`https://n8n.gestorconsultoria.com.co/mcp/google-workspace-gateway`,
+transporte **Streamable HTTP**). Es un MCP **remoto**: **no** requiere
+instalar nada ni rebuild de imagen (solo salida HTTPS, ya cubierta por el
+long-polling de Telegram).
+
+| Tool | Uso |
+|---|---|
+| `google_gmail_search` | Buscar correos (metadatos + snippet) |
+| `google_gmail_get_message` | Cuerpo de un mensaje por id |
+| `google_gmail_mark_read` | Marcar como leído (quita `UNREAD`) — ESCRITURA |
+
+El token va en `.env` como `GWP_MCP_TOKEN` (mismo valor que la credencial de
+n8n **`Google Workspace Gateway MCP`**) y se referencia en `config/openclaw.json`:
+
+```json5
+mcp: { servers: { gmail: {
+  url: "https://n8n.gestorconsultoria.com.co/mcp/google-workspace-gateway",
+  transport: "streamable-http",
+  enabled: true,
+  requestTimeoutMs: 30000,
+  headers: { Authorization: "Bearer ${GWP_MCP_TOKEN}" },
+  toolFilter: { include: [
+    "google_gmail_search", "google_gmail_get_message", "google_gmail_mark_read"
+  ] }
+} } }
+```
+
+Aplicar (vía Control UI `/settings/mcp` por el túnel SSH, o editando
+`config/openclaw.json` + reinicio) y validar:
+
+```bash
+docker compose restart openclaw-gateway
+# OJO: usar `exec` DENTRO del gateway; `docker compose run --rm openclaw-cli`
+# falla con GatewayLockNamespaceError (contenedor aparte = otro PID namespace,
+# no puede leer el state compartido lockeado por el gateway).
+docker compose exec openclaw-gateway node dist/index.js mcp list
+docker compose exec openclaw-gateway node dist/index.js mcp doctor gmail --probe
+```
+
+> Nota: la nota de "Fase 2" sobre el binario `gog` aplica solo a la
+> integración **nativa** de Google; consumir un MCP remoto no la necesita.
 
 ## Actualizar / rollback
 
@@ -94,7 +147,7 @@ Las versiones de imagen son inmutables (etiqueta = pin). Nunca usar `:latest`.
 # Actualizar: cambiar el tag EN ESTE COMPOSE al nuevo pin estable (ej. 2026.x.y),
 cd /data/odoo/40 && docker compose pull openclaw-gateway openclaw-cli
 docker compose up -d                                  # recrea con el pin nuevo
-docker compose run --rm openclaw-cli doctor --json    # validar
+docker compose exec openclaw-gateway node dist/index.js doctor --json    # validar
 ```
 
 Rollback = `git checkout` del compose anterior (o editar el tag) + `docker compose up -d`.

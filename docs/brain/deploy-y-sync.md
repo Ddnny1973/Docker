@@ -7,7 +7,7 @@ tags: [git, deploy, nginx, hetzner, trunk, github-actions]
 related:
   - "[[_index]]"
   - "[[arquitectura-contenedores]]"
-updated: 2026-08-21
+updated: 2026-10-17
 owner: dueño del repo
 ---
 
@@ -32,6 +32,19 @@ para sincronizar y desplegar automáticamente:
 3. Ejecuta en servidor: `git pull origin trunk`
 4. Ejecuta: `docker compose up -d` (reinicia todos los servicios)
 5. Muestra estado: `docker compose ps`
+
+### Segundo workflow: `sync-deploy.yml`
+
+Existe además `.github/workflows/sync-deploy.yml` (push a `trunk` que toque `35/**`,
+`36/**`, `37/**` o `pgadmin4/**`, o ejecución manual). Copia por `scp` los
+`docker-compose.yml` de 35, 36, 37 y pgadmin4, y `config/` de 35 y 37, a
+`root@2.29.11.73:/data/odoo/`. No borra nada (solo `scp`) y no reinicia servicios.
+Se ejecuta en paralelo a `auto-deploy.yml`.
+
+⚠️ Pendiente de verificar: no hay `docker-compose.yml` en la raíz del repo, así que
+el paso `docker compose up -d` de `auto-deploy.yml` (en `/data/odoo`) podría fallar
+o no levantar nada; los proyectos se reinician desde su propia carpeta. Ver
+[[auditoria-repo-2026-10]].
 
 ### Seguridad
 

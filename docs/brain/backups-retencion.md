@@ -6,7 +6,7 @@ repo: DOCKER
 tags: [backup, retencion, hetzner, storagebox]
 related:
   - "[[_index]]"
-updated: 2026-08-20
+updated: 2026-10-17
 owner: dueño del repo
 ---
 
@@ -19,8 +19,18 @@ owner: dueño del repo
   y vuelve a hacer `docker compose start`. Asume `/data/odoo/` como raíz de
   trabajo: **ejecutarlo en el servidor, no desde este checkout**.
 - `backup_todos.sh`: itera una lista **hardcodeada** de proyectos
-  (`16 29 30 32 33 34`) llamando a `backup_contenedor.sh`. Si se agrega un
-  proyecto nuevo que deba respaldarse, hay que añadirlo a esa lista.
+  (`29 30 32 35 36 37 41 42 43 pgadmin4`, los consolidados en Alma) llamando a
+  `backup_contenedor.sh`. Si se agrega un proyecto nuevo que deba respaldarse,
+  hay que añadirlo a esa lista. **No incluye `38`, `39` ni `40`.** Para `40` el
+  plan está en `40/README.md` ("Plan de backup — PENDIENTE"): usar
+  `backup_contenedor.sh 40` y ampliar esta lista; ojo, el tar incluye `config/` y
+  `secrets/`, por lo que el backup es material sensible.
+- `monitor_resources.sh` (raíz): monitoreo de CPU/memoria + top 5 contenedores,
+  pensado para cron cada 2 min en el servidor; escribe en
+  `/mnt/hetzner-backup/monitor_resources.log`. Está en `.gitignore` pero versionado
+  (ver [[auditoria-repo-2026-10]]).
+- ⚠️ Los backups hacen `docker compose stop`: los proyectos quedan caídos mientras
+  se empaqueta la carpeta.
 
 ## Depuración por retención
 

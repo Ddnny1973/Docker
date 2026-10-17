@@ -21,12 +21,38 @@ Agente personal desplegado como **Docker Compose** en el servidor consolidado de
 ├── docker-compose.yml   # gateway + cli, endurecido, puerto 8040 loopback
 ├── .env.example         # plantilla de secretos (versionado, sin valores)
 ├── README.md            # este runbook
+├── workspace-template/  # AGENTS.md, USER.md y SOUL.md VERSIONADOS (fuente de verdad de las instrucciones)
 ├── .env                 # SERVIDOR, no versionado (chmod 600)
 ├── config/              # estado del agente (openclaw.json, SQLite) = CREDENCIAL
-├── workspace/           # área de trabajo del agente
+├── workspace/           # área de trabajo del agente (runtime, ignorado por git)
 ├── secrets/             # auth-profile / OAuth (futuro)
 └── backups/             # respaldos del proyecto (cuando se habilite)
 ```
+
+## Instrucciones del agente (AGENTS.md / USER.md / SOUL.md)
+
+`workspace/` es runtime del agente (tiene su propio `.git`, notas y memoria que el
+agente edita) y está en `.gitignore`. Por eso las instrucciones se versionan aparte,
+en `workspace-template/`, y **se copian a mano** al servidor: el `git pull` del
+deploy nunca toca `workspace/`.
+
+Aplicar cambios (en el servidor, tras el `git pull`). Hacer copia antes de pisar;
+`USER.md` también lo edita el agente, así que revisa el diff antes de sobrescribirlo:
+
+```bash
+cd /data/odoo/40
+for f in AGENTS.md USER.md SOUL.md; do
+  cp -p workspace/$f workspace/$f.bak
+  diff -u workspace/$f workspace-template/$f | head -40   # revisar
+done
+cp workspace-template/AGENTS.md workspace/AGENTS.md
+cp workspace-template/USER.md   workspace/USER.md
+cp workspace-template/SOUL.md   workspace/SOUL.md
+chown 1000:1000 workspace/AGENTS.md workspace/USER.md workspace/SOUL.md
+```
+
+Los archivos se leen al iniciar la sesión: enviar `/new` por Telegram para que
+apliquen. Ningún cambio reinicia ni recrea el contenedor.
 
 ## Primer arranque (en el servidor)
 

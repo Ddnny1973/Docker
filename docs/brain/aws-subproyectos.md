@@ -6,7 +6,7 @@ repo: DOCKER
 tags: [aws, lambda, sam, cloudformation, snapshots, windows]
 related:
   - "[[_index]]"
-updated: 2026-09-28
+updated: 2026-10-18
 owner: dueño del repo
 ---
 
@@ -84,9 +84,27 @@ Gotchas (conocimiento duro, ver commits recientes):
   CPU por diferencia de tiempo de proceso entre muestras
   (`monitor-state.json`, desde la 2ª muestra) para que nunca queden vacías en
   silencio si los contadores vuelven a romperse.
-- Decisión pendiente tras una semana con limpieza activa: ¿basta con ella o se
-  aumenta capacidad (memoria)? Soporte: Excel consolidado en
-  `gc-wordoffice-infra\monitor\monitoreo-gcusers-v2-consolidado.xlsx`.
+- Soporte: Excel consolidado en
+  `gc-wordoffice-infra\monitor\monitoreo-gcusers-v2-consolidado.xlsx` (hojas
+  `Resumen_diario`, `Resumen_semanal`, `Datos`; regenerado el 2026-10-18 con datos
+  hasta esa fecha).
+
+### Seguimiento 28 sep – 18 oct (3 semanas con CPU medida)
+
+- **Memoria**: pico semanal de RAM usada 11.3 / 11.6 / 12.3 GB (baseline 13.1 GB);
+  RAM libre mínima 4.9 / 4.6 / 3.9 GB (baseline 3.1 GB). Ninguna muestra con
+  <2.5 GB libres. La semana del 13–16 oct sube un poco frente a las dos anteriores.
+- **CPU**: promedio 21–23 %; solo ~1.5 % de las muestras 8–18 h pasan del 80 %. Los
+  picos los causan procesos `MSACCESS` (varios usuarios), a veces `MsMpEng`. Disco:
+  latencia 0.
+- **Limpieza de sesiones NO verificada**: `ses_disc` crece a 6–8 en la tarde
+  (17–19 h) y no baja, y la carpeta `log\` del servidor está vacía → la tarea
+  `GCLimpiezaSesiones` probablemente nunca se instaló o no actúa. Revisar con
+  `schtasks /Query /TN GCLimpiezaSesiones /V /FO LIST` y probar `-WhatIf`.
+- **Decisión (2026-10-18)**: sin razón técnica hoy para subir RAM ni CPU. Reevaluar
+  si la RAM libre mínima baja de ~2.5 GB, aparecen >15 sesiones activas o el
+  commit supera ~90 %. Cambiar el tipo de instancia EC2 exige stop/start (el
+  servidor ya se apaga cada noche); no cambia IP elástica ni EBS.
 - Instalado en `C:\scripts\Monitoreo\` el 2026-09-14.
 - Docs de arquitectura y planes de migración en `gc-wordoffice-infra/docs/`.
 - Este repo no contiene credenciales AWS; los stacks se actualizan con credenciales

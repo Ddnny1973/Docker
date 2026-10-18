@@ -1,0 +1,2 @@
+﻿timestamp;cpu_pct;mem_libre_mb;mem_total_mb;commit_pct;disk_read_s;disk_write_s;sessions_rdp;ses_disc;usuarios;top5_cpu;top5_ram
+2026-10-18 06:05:57;31,0;14197;16220;10,1;0;0;0/4;1;"";"MsMpEng:102%|WmiPrvSE#2:6%";"MsMpEng:577MB|powershell:87MB|Registry:64MB|LogonUI:62MB|svchost:54MB"

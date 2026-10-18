@@ -66,11 +66,16 @@ foreach ($line in (& query.exe user 2>$null)) {
     if (-not $t -or $t -match '^USERNAME') { continue }
     $cols = $t -split '\s+'
     if ($cols.Count -lt 5) { continue }
-    $session = $cols[1]
-    $id      = $cols[2]
-    $state   = $cols[3]
-    $idleMin = Convert-Idle $cols[4]
     $username = $cols[0]
+    # Las sesiones desconectadas NO traen nombre de sesion en `query user`
+    # (columna vacia), asi que las columnas se corren una posicion a la izquierda:
+    #   con nombre : usuario rdp-tcp#5 3 Active 5 fecha hora
+    #   sin nombre : usuario           3 Disc   35 fecha hora
+    if ($cols[3] -in @('Active', 'Disc', 'Conn')) {
+        $session = $cols[1]; $id = $cols[2]; $state = $cols[3]; $idleMin = Convert-Idle $cols[4]
+    } elseif ($cols[2] -in @('Active', 'Disc', 'Conn')) {
+        $session = 'rdp-tcp(sin nombre)'; $id = $cols[1]; $state = $cols[2]; $idleMin = Convert-Idle $cols[3]
+    } else { continue }
 
     if ($session -notmatch '(?i)^rdp-tcp') { continue }   # solo sesiones RDP de usuarios
     if ($state -ne 'Disc') { continue }                    # solo desconectadas

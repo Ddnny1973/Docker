@@ -97,10 +97,13 @@ Gotchas (conocimiento duro, ver commits recientes):
 - **CPU**: promedio 21–23 %; solo ~1.5 % de las muestras 8–18 h pasan del 80 %. Los
   picos los causan procesos `MSACCESS` (varios usuarios), a veces `MsMpEng`. Disco:
   latencia 0.
-- **Limpieza de sesiones NO verificada**: `ses_disc` crece a 6–8 en la tarde
-  (17–19 h) y no baja, y la carpeta `log\` del servidor está vacía → la tarea
-  `GCLimpiezaSesiones` probablemente nunca se instaló o no actúa. Revisar con
-  `schtasks /Query /TN GCLimpiezaSesiones /V /FO LIST` y probar `-WhatIf`.
+- **Limpieza de sesiones: bug encontrado (2026-10-18)**. `query user` NO trae
+  nombre de sesión en las sesiones `Disc` (columna vacía), así que las columnas
+  se corrían y el filtro `rdp-tcp*` descartaba todas: nunca cerró ninguna (log
+  vacío, `ses_disc` 6–8 por la tarde). Corregido en
+  `limpiar-sesiones-desconectadas.ps1` (rama `fix/limpieza-sesiones-disc-20261018`);
+  hay que copiar el script al servidor y probar con `-WhatIf` antes de dejarlo
+  actuar. Medir el efecto con `ses_disc` y RAM libre una semana.
 - **Decisión (2026-10-18)**: sin razón técnica hoy para subir RAM ni CPU. Reevaluar
   si la RAM libre mínima baja de ~2.5 GB, aparecen >15 sesiones activas o el
   commit supera ~90 %. Cambiar el tipo de instancia EC2 exige stop/start (el

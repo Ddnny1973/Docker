@@ -200,7 +200,7 @@ memoria detectada en el monitoreo antes de decidir un cambio de capacidad.
 
 Esto crea la tarea `GCLimpiezaSesiones` (SYSTEM) con disparadores al arranque y
 cada 5 min (`P9999D`, mismo patrón que el monitor). Solo toca sesiones
-`rdp-tcp*` en estado `Disc` con más de `-IdleMinutes` (default **30**) de
+`rdp-tcp*` en estado `Disc` con más de `-IdleMinutes` (default **60**) de
 inactividad. Antes de instalarlo puedes simular sin cerrar nada:
 
 ```powershell

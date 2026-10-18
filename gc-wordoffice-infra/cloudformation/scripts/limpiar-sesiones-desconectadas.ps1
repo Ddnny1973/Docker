@@ -15,7 +15,7 @@
 
 .PARAMETER IdleMinutes
     Minutos de inactividad minimos para considerar la sesion desconectada
-    (default 30).
+    (default 60).
 
 .PARAMETER LogDir
     Carpeta del log (default 'log' dentro de la carpeta del script).
@@ -31,7 +31,7 @@
 #>
 
 param(
-    [int]$IdleMinutes = 30,
+    [int]$IdleMinutes = 60,
     [string]$LogDir = '',
     [switch]$WhatIf
 )

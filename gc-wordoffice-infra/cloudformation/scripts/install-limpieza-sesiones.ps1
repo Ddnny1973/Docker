@@ -13,7 +13,7 @@
     inactividad, liberando la RAM que ocupan sin afectar a sesiones activas.
 
 .PARAMETER IdleMinutes
-    Minutos de inactividad antes de cerrar una sesion desconectada (default 30).
+    Minutos de inactividad antes de cerrar una sesion desconectada (default 60).
 
 .PARAMETER IntervalMinutes
     Minutos entre pasadas de limpieza (default 5).
@@ -26,7 +26,7 @@
 #>
 
 param(
-    [int]$IdleMinutes = 30,
+    [int]$IdleMinutes = 60,
     [int]$IntervalMinutes = 5
 )
 

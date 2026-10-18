@@ -66,7 +66,7 @@ Gotchas (conocimiento duro, ver commits recientes):
   contador en inglés no resuelven en Windows Server en español.
 - `limpiar-sesiones-desconectadas.ps1` + `install-limpieza-sesiones.ps1` —
   libera RAM cerrando con `logoff` las sesiones RDP (`rdp-tcp*`) en estado
-  `Disc` con más de 30 min de inactividad (tarea `GCLimpiezaSesiones`, SYSTEM,
+  `Disc` con más de 60 min de inactividad (tarea `GCLimpiezaSesiones`, SYSTEM,
   al arranque + cada 5 min). Primera acción para aliviar la presión de memoria
   detectada antes de decidir un aumento de capacidad; el monitor (`ses_disc`)
   mide el efecto y los logs van a `log\limpiar-sesiones-YYYYMMDD.log`.
